@@ -1,0 +1,75 @@
+---
+title: "Austin_Crime"
+author: "Kevin, Elle, Abigail"
+date: "5/4/2022"
+output: md_document
+---
+
+```{r Loading Libraries, echo=TRUE, message=FALSE, warning=FALSE, show=FALSE}
+
+library(tidyverse)
+library(mosaic)
+library(ggplot2)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(ggmap)
+library(geojsonio)
+library(broom)
+library(data.table)
+```
+
+# Data Visualization
+## Feature Engineering and Data Loading
+```{r Data Cleaning,message=FALSE, warning=FALSE, echo=FALSE}
+obs <- read_csv("austin_crime.csv")
+
+# Encode the crime target variable of interest
+# 1 if "Cleared by Arrest", 0 otherwise
+obs$clearance_status = ifelse(obs$clearance_status == "Cleared by Arrest", 1, 0)
+
+# Omit any missing rows for clearance status
+obs = filter(obs,clearance_status != "NA")
+# This result in ~40k observations being dropped
+
+# We determine the arrest rate, and append it to our zip-code level data
+t1 = obs %>% mutate(number_crimes = count(unique_key)) %>% 
+  group_by(zipcode) %>% summarise(arrest_rate =(sum(clearance_status))/sum(number_crimes))
+
+zip_list = as.data.frame(t1$zipcode)
+zip_list = as.character(zip_list$`t1$zipcode`)
+
+zip <- read_csv("austin_crime_zips.csv")
+zip <- select(zip, c(zipcode,population_density,median_income,median_home_value,prop_white,arrest_rate))
+zip$arrest_rate = scale(zip$arrest_rate)
+zip$zipcode = as.character(zip$zipcode)
+
+
+tx <- geojson_read("tx_zip_geo.json", what = "sp")
+
+```
+
+# Data Visualization
+## Subsetting geojson
+```{r Data Cleaning,message=FALSE, warning=FALSE, echo=FALSE}
+# Subsetting our geojson such that only the zipcodes of interest are included...
+
+# Transforming to a frame for ggplot...
+tx_fortified <- tidy(tx, region = "ZCTA5CE10")
+tx_sub <- setDT(tx_fortified)[id %chin% zip_list]
+
+tx_sub = tx_sub %>% left_join(.,zip, by= c("id"="zipcode"))
+tx_sub = na.omit(tx_sub)
+
+```
+
+# Data Visualization
+## Visualizing
+```{r Data Cleaning,message=FALSE, warning=FALSE, echo=FALSE}
+options(scipen=10000)
+ggplot() + geom_polygon(data=tx_sub, aes(fill=median_income,x=long, y=lat, group=group,), color = 'black')
+ggplot() + geom_polygon(data=tx_sub, aes(fill=median_home_value,x=long, y=lat, group=group,), color = 'black')
+ggplot() + geom_polygon(data=tx_sub, aes(fill=prop_white,x=long, y=lat, group=group,), color = 'black')
+ggplot() + geom_polygon(data=tx_sub, aes(fill=arrest_rate,x=long, y=lat, group=group,), color = 'black')
+
+```
