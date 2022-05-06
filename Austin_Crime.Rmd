@@ -6,7 +6,6 @@ output: md_document
 ---
 
 ```{r Loading Libraries, echo=TRUE, message=FALSE, warning=FALSE, show=FALSE}
-
 library(tidyverse)
 library(mosaic)
 library(ggplot2)
@@ -23,6 +22,11 @@ library(modelr)
 library(knitr)
 library(parallel)
 library(foreach)
+library(pdp)
+library(rpart)
+library(rpart.plot)
+library(gbm)
+library(randomForest)
 ```
 
 # Data Visualization
@@ -154,23 +158,65 @@ prune_1se = function(my_tree) {
 crime.prune <- prune_1se(crime.tree)
 ```
 
-## Third Model: Random Forest
+## Third Model: Random Forest (error out)
 ```{r Random Forest, message=FALSE, warning=FALSE, echo=FALSE}
 trctrl <- trainControl(method = "cv", number = 5, savePredictions=TRUE)
+
+crime_train$clearance_status <- factor(crime_train$clearance_status, labels = c("yes", "no"))
+
 crime_forest1 <- train(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
                        data = crime_train,
-                       method = "rf", trControl=trctrl,
+                       method = "rf",
+                       trControl=trctrl,
                        prox=TRUE, tuneLength=1)
 
+crime_forest_rmse <- data.frame(
 crime_forest1$results$RMSE
+)
+
+colnames(crime_forest_rmse) = c("Random Forest")
+rownames(crime_forest_rmse) = "RMSE"
+kable(crime_forest_rmse)
 
 crime.forest <- randomForest(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
-                    data = green_train,
+                    data = crime_train,
                     importance = TRUE, na.action = na.omit)
 ```
 
+We repeated the process for gradient boosted models. We used Gradient Boosting models with distribution as "gaussian", the number of trees 
+as 10000, shrinkage as 0.01,and with a interaction depth of 4.
 
-## Fifth Model: Lasso Model
+## Fourth Model: Gradient Boosting
+```{r Gradient Boosting, message=FALSE, warning=FALSE, echo=FALSE}
+crime_gbm1 <- gbm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+                  data = crime_train,
+                  distribution = "gaussian",
+                  n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
+
+crime_gbm1$cv.error %>% mean %>% sqrt
+
+crime.gbs <- gbm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+                 data = crime_train,
+                 distribution = "gaussian",
+                 n.trees = 10000,
+                 shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
+```
+
+## Fifth Model: KNN Model (error out)
+```{r KNN, message=FALSE, warning=FALSE, echo=FALSE}
+trctrl <- trainControl(method = "cv", number = 5, savePredictions=TRUE)
+crime_knn1 <- train(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+                    data = crime_train,
+                    method = "knn", trControl=trctrl, tuneLength=20)
+
+crime_knn_rmse <- data.frame(matrix(c(
+crime_knn1$results[crime_knn1$results$RMSE == crime_knn1$results$RMSE %>% min, 1] %>% as.integer(), 
+crime_knn1$results[crime_knn1$results$RMSE == crime_knn1$results$RMSE %>% min, 2]), nrow = 2)) 
+
+```
+
+## Sixth Model: Lasso Model (not done yet)
 ```{r Lasso, message=FALSE, warning=FALSE, echo=FALSE}
 x <- model.matrix(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
                   data = table)[,-1] 
