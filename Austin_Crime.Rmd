@@ -87,8 +87,7 @@ ggplot() + geom_polygon(data = tx_sub, aes(fill = arrest_rate, x = long, y = lat
 ```
 
 # Models
-## Logistic Regression
-
+## First Model: Logistic Regression
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
 table <- merge(obs, zip, by = "zipcode")
 
@@ -105,5 +104,84 @@ confusion_out_logit <- table(y = crime_test$clearance_status,
                              yhat = yhat_test_crime)
 accuracy <- (confusion_out_logit[1,1] + confusion_out_logit[2,2])/sum(confusion_out_logit)
 
+rmse(crime_logit, crime_test)
+
 kable(table %>% group_by(zipcode) %>% summarize(count = n()) %>% rbind(data.frame(zipcode = "total", count = 17502)))
 ```
+
+## Variable Selection stepwise
+```{r Stepwise, message=FALSE, warning=FALSE, echo=FALSE}
+# crime_step <- step(crime_logit, scope=~(.)^2)
+
+# stepwise function chose the following model
+crime_step <- glm(clearance_status ~ population_density + median_income + median_home_value + 
+    prop_white + arrest_rate + zipcode + population_density:median_income + 
+    median_home_value:arrest_rate + median_income:median_home_value + 
+    median_income:prop_white, data = crime_train, family = binomial)
+
+```
+
+In terms of the types of models, we started with a baseline logistic regression model, with the specification of clearance_status on everything else. After that, using the stepwise variable selection function, we computed the best set of variables and the interaction between them which performed the best. The logistic model chose by the stepwise function is 
+
+`clearance_status ~ population_density + median_income + median_home_value + 
+    prop_white + arrest_rate + zipcode + population_density:median_income + 
+    median_home_value:arrest_rate + median_income:median_home_value + 
+    median_income:prop_white, data = crime_train, family = binomial)`
+    
+## Second Model: Tree
+```{r Tree, message=FALSE, warning=FALSE, echo=FALSE}
+trctrl <- trainControl(method = "cv", number = 5, savePredictions=TRUE)
+
+crime_tree1 <- train(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+                     data = crime_train,
+                     method = "rpart",
+                     trControl = trctrl,
+                     tuneLength = 0)
+
+crime_tree1$results$RMSE
+
+crime.tree <- rpart(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode, 
+                    data = crime_train,
+                    control = rpart.control(cp = 0.002, minsplit=30))
+
+prune_1se = function(my_tree) {
+  out = as.data.frame(my_tree$cptable)
+  thresh = min(out$xerror + out$xstd)
+  cp_opt = max(out$CP[out$xerror <= thresh])
+  prune(my_tree, cp=cp_opt)
+}
+
+crime.prune <- prune_1se(crime.tree)
+```
+
+## Third Model: Random Forest
+```{r Random Forest, message=FALSE, warning=FALSE, echo=FALSE}
+trctrl <- trainControl(method = "cv", number = 5, savePredictions=TRUE)
+crime_forest1 <- train(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+                       data = crime_train,
+                       method = "rf", trControl=trctrl,
+                       prox=TRUE, tuneLength=1)
+
+crime_forest1$results$RMSE
+
+crime.forest <- randomForest(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+                    data = green_train,
+                    importance = TRUE, na.action = na.omit)
+```
+
+
+## Fifth Model: Lasso Model
+```{r Lasso, message=FALSE, warning=FALSE, echo=FALSE}
+x <- model.matrix(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+                  data = table)[,-1] 
+#[, -1] excludes first col (intercept)
+
+x <- scale(x, center = TRUE, scale = TRUE) 
+y <- table$clearance_status
+grid <- 10^seq(10, -2, length = 100)
+lasso.mod <- glmnet(x, y, alpha = 1, lambda = grid)
+cv.out <- cv.glmnet(x, y, alpha = 1)
+bestlam <- cv.out$lambda.min
+
+plot(lasso.mod)
+title("Figure 1: Lasso Coefficients as a Function of L1 Norm", line = 3)
