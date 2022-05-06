@@ -17,11 +17,17 @@ library(ggmap)
 library(geojsonio)
 library(broom)
 library(data.table)
+library(rsample)
+library(caret)
+library(modelr)
+library(knitr)
+library(parallel)
+library(foreach)
 ```
 
 # Data Visualization
 ## Feature Engineering and Data Loading
-```{r Data Cleaning,message=FALSE, warning=FALSE, echo=FALSE}
+```{r Data Cleaning, message=FALSE, warning=FALSE, echo=FALSE}
 obs <- read_csv("austin_crime.csv")
 
 # Encode the crime target variable of interest
@@ -54,7 +60,7 @@ tx <- geojson_read("tx_zip_geo.json", what = "sp")
 
 # Data Visualization
 ## Subsetting geojson
-```{r Data Cleaning,message=FALSE, warning=FALSE, echo=FALSE}
+```{r Data Cleaning, message=FALSE, warning=FALSE, echo=FALSE}
 # Subsetting our geojson such that only the zipcodes of interest are included...
 
 # Transforming to a frame for ggplot...
@@ -68,7 +74,7 @@ tx_sub <- na.omit(tx_sub)
 
 # Data Visualization
 ## Visualizing
-```{r Data Cleaning,message=FALSE, warning=FALSE, echo=FALSE}
+```{r Data Cleaning, message=FALSE, warning=FALSE, echo=FALSE}
 options(scipen = 10000)
 
 ggplot() + geom_polygon(data = tx_sub, aes(fill = median_income, x = long, y = lat, group = group,), color = 'black')
@@ -78,4 +84,26 @@ ggplot() + geom_polygon(data = tx_sub, aes(fill = median_home_value, x = long, y
 ggplot() + geom_polygon(data = tx_sub, aes(fill = prop_white, x = long, y = lat, group = group,), color = 'black')
 
 ggplot() + geom_polygon(data = tx_sub, aes(fill = arrest_rate, x = long, y = lat, group = group,), color = 'black')
+```
+
+# Models
+## Logistic Regression
+
+```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
+table <- merge(obs, zip, by = "zipcode")
+
+crime <- initial_split(table, prob = 0.8)
+crime_train <- training(crime)
+crime_test <- testing(crime)
+
+crime_logit <- glm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+                   data = crime_train, family = binomial)
+
+phat_test_crime <- predict(crime_logit, crime_test, type='response')
+yhat_test_crime <- ifelse(phat_test_crime > 0.5, 1, 0)
+confusion_out_logit <- table(y = crime_test$clearance_status, 
+                             yhat = yhat_test_crime)
+accuracy <- (confusion_out_logit[1,1] + confusion_out_logit[2,2])/sum(confusion_out_logit)
+
+kable(table %>% group_by(zipcode) %>% summarize(count = n()) %>% rbind(data.frame(zipcode = "total", count = 17502)))
 ```
