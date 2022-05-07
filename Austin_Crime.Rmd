@@ -114,10 +114,25 @@ ggplot(data=zip) + geom_point(aes(x=population_density, y=arrest_rate))+theme_li
 
 ```
 
+```{r data_description, message=FALSE, warning=FALSE, echo=FALSE}
+table <- merge(obs, zip, by = "zipcode") %>% drop_na()
+
+Variable <- c("clearance_status", "zipcode", "population_density", "median_income", "median_home_value", "prop_white", "arrest_rate")
+
+Description <- c("whether or not crime is cleared by arrest", " postal zipcode in Austin, TX", "people per square mile", "median income of postal zipcode", "median home value of postal zipcode","proportion of postal zipcode that is white","proportion of crimes cleared by arrest relative to total crimes")
+
+Type <- c("numeric" , "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")
+
+vars_of_interest <- data.frame(Variable, Description, Type)
+
+kable(vars_of_interest, caption = "Data Dictionary")
+
+```
+
+
 # Models
 ## First Model: Logistic Regression
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
-
 
 x <- initial_split(table, prob = 0.8)
 crime_train <- training(x)
