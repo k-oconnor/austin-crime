@@ -3,6 +3,7 @@ title: "Austin_Crime"
 author: "Kevin, Elle, Abigail"
 date: "5/4/2022"
 output: md_document
+always_allow_html: true
 ---
 
 ```{r Loading Libraries, echo=TRUE, message=FALSE, warning=FALSE, show=FALSE}
@@ -69,16 +70,13 @@ table <- merge(obs, zip, by = "zipcode") %>% drop_na()
 table$zipcode = as.factor(table$zipcode)
 
 ## We want to set some data aside for validation at the end.. so we conduct a split..
-x <- initial_split(table, prob = 0.9)
-table <- training(x)
-validation <- testing(x)
 
 
 ```
 
 # Data Visualization
 ## Subsetting geojson
-```{r Data Cleaning, message=FALSE, warning=FALSE, echo=FALSE}
+```{r Data Cleaning2, message=FALSE, warning=FALSE, echo=FALSE}
 # Subsetting our geojson such that only the zipcodes of interest are included...
 
 # Transforming to a frame for ggplot...
@@ -92,7 +90,7 @@ tx_sub <- na.omit(tx_sub)
 
 # Data Visualization
 ## Visualizing
-```{r Data Cleaning, message=FALSE, warning=FALSE, echo=FALSE}
+```{r Data Cleaning3, message=FALSE, warning=FALSE, echo=FALSE}
 options(scipen = 10000)
 
 ggplot() + geom_polygon(data = tx_sub, aes(fill = median_income, x = long, y = lat, group = group,), color = 'black') + ggtitle("Median Income in Austin Area Zipcodes (USD)")
@@ -121,30 +119,27 @@ ggplot(data=zip) + geom_point(aes(x=population_density, y=arrest_rate))+theme_li
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
 
 
+x <- initial_split(table, prob = 0.8)
+crime_train <- training(x)
+crime_test <- testing(x)
+
+crime_logit <- glm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate,
+                   data = crime_train, family = binomial)
+
+
+
 rmse_frame_logit=foreach(x=1:10, .combine='rbind')%do%{
 
 x <- initial_split(table, prob = 0.8)
 crime_train <- training(x)
 crime_test <- testing(x)
 
-crime_logit <- glm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
-                   data = crime_train, family = binomial)
 
 modelr::rmse(crime_logit,crime_test)
 } %>% as.data.frame
 validate_RMSE_logit = mean(rmse_frame_logit$V1)
 ## Validated RMSEout of 2.16
 
-
-phat_test_crime <- predict(crime_logit, crime_test, type='response')
-yhat_test_crime <- ifelse(phat_test_crime > 0.5, 1, 0)
-confusion_out_logit <- table(y = crime_test$clearance_status, 
-                             yhat = yhat_test_crime)
-accuracy <- (confusion_out_logit[1,1] + confusion_out_logit[2,2])/sum(confusion_out_logit)
-
-
-
-kable(table %>% group_by(zipcode) %>% summarize(count = n()) %>% rbind(data.frame(zipcode = "total", count = 17502)))
 ```
 
 
@@ -153,6 +148,11 @@ kable(table %>% group_by(zipcode) %>% summarize(count = n()) %>% rbind(data.fram
 ## Second Model: Stepwise Selection
 ```{r Stepwise, message=FALSE, warning=FALSE, echo=FALSE}
 #crime_step <- step(crime_logit, scope=~(.)^2)
+# stepwise function chose the following model
+crime_step <- glm(clearance_status ~ population_density + median_income + median_home_value + 
+    prop_white + arrest_rate + zipcode + population_density:median_income + 
+    median_home_value:arrest_rate + median_income:median_home_value + 
+    median_income:prop_white, data = crime_train, family = binomial)
 
 rmse_frame_step=foreach(x=1:10, .combine='rbind')%do%{
 
@@ -160,12 +160,6 @@ x <- initial_split(table, prob = 0.8)
 crime_train <- training(x)
 crime_test <- testing(x)
 
-
-# stepwise function chose the following model
-crime_step <- glm(clearance_status ~ population_density + median_income + median_home_value + 
-    prop_white + arrest_rate + zipcode + population_density:median_income + 
-    median_home_value:arrest_rate + median_income:median_home_value + 
-    median_income:prop_white, data = crime_train, family = binomial)
 
 modelr::rmse(crime_step,crime_test)
 } %>% as.data.frame
@@ -272,14 +266,14 @@ rmse = sqrt(mse)
 ## Confusion Matrix for the best model...
 ```{r Validation_GBM, message=FALSE, warning=FALSE, echo=FALSE}
 
-pred =predict(crime_gbm,newdata=validation)
+pred =predict(crime_gbm,newdata=crime_test)
 confusion_table = data.frame(fold_id=integer(),TPR=integer(),FPR=integer())
 
 level = seq(.05,.5,by=.05)
 
 confusion_level=foreach(x=level)%do%{
 yhat_test = ifelse(pred > x,1,0)
-confusion_out = table(y=validation$clearance_status, yhat = yhat_test)
+confusion_out = table(y=crime_test$clearance_status, yhat = yhat_test)
 TPR = (confusion_out[2,2]/(confusion_out[2,1]+confusion_out[2,2]))
 FPR = (confusion_out[1,2]/(confusion_out[1,1]+confusion_out[1,2]))
 confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
@@ -288,20 +282,20 @@ confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
 
 confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for GBM Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
 
-gbm_auc = auc(validation$clearance_status,pred)
+gbm_auc = auc(crime_test$clearance_status,pred)
 ## .669
 ```
 ## Confusion Matrix for the second best model...
 ```{r Validation_RF, message=FALSE, warning=FALSE, echo=FALSE}
 
-pred =predict(crime_forest,newdata=validation)
+pred =predict(crime_forest,newdata=crime_test)
 confusion_table = data.frame(fold_id=integer(),TPR=integer(),FPR=integer())
 
 level = seq(.05,.5,by=.05)
 
 confusion_level=foreach(x=level)%do%{
 yhat_test = ifelse(pred > x,1,0)
-confusion_out = table(y=validation$clearance_status, yhat = yhat_test)
+confusion_out = table(y=crime_test$clearance_status, yhat = yhat_test)
 TPR = (confusion_out[2,2]/(confusion_out[2,1]+confusion_out[2,2]))
 FPR = (confusion_out[1,2]/(confusion_out[1,1]+confusion_out[1,2]))
 confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
@@ -311,13 +305,39 @@ confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
 confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for Random Forest Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
 
 
-forest_auc = auc(validation$clearance_status,pred)
+forest_auc = auc(crime_test$clearance_status,pred)
 ## .667
 
 ```
 
+## Sanity-Check: Confusion Matrix for the logit model...
+```{r Sanity-Check - Logit Performance, message=FALSE, warning=FALSE, echo=FALSE}
 
-```{r Validation_RF, message=FALSE, warning=FALSE, echo=FALSE}
+pred = predict(crime_logit, crime_test, type='response')
+confusion_table = data.frame(fold_id=integer(),TPR=integer(),FPR=integer())
+
+level = seq(.1,.5,by=.05)
+
+confusion_level=foreach(x=level)%do%{
+yhat_test = ifelse(pred > x,1,0)
+confusion_out = table(y=crime_test$clearance_status, yhat = yhat_test)
+TPR = (confusion_out[2,2]/(confusion_out[2,1]+confusion_out[2,2]))
+FPR = (confusion_out[1,2]/(confusion_out[1,1]+confusion_out[1,2]))
+confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
+}
+
+
+confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for Random Forest Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
+
+
+logit_auc = auc(crime_test$clearance_status,pred)
+## .661
+
+```
+
+
+
+```{r Variable Importance, message=FALSE, warning=FALSE, echo=FALSE}
 ## Variable Importance Plots
 
 vi = varImpPlot(crime_forest, type=1)
