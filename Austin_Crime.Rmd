@@ -117,7 +117,7 @@ ggplot(data=zip) + geom_point(aes(x=population_density, y=arrest_rate))+theme_li
 # Models
 ## First Model: Logistic Regression
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
-
+set.seed(1)
 
 x <- initial_split(table, prob = 0.8)
 crime_train <- training(x)
@@ -147,6 +147,7 @@ validate_RMSE_logit = mean(rmse_frame_logit$V1)
 
 ## Second Model: Stepwise Selection
 ```{r Stepwise, message=FALSE, warning=FALSE, echo=FALSE}
+set.seed(2)
 #crime_step <- step(crime_logit, scope=~(.)^2)
 # stepwise function chose the following model
 crime_step <- glm(clearance_status ~ population_density + median_income + median_home_value + 
@@ -178,7 +179,7 @@ In terms of the types of models, we started with a baseline logistic regression 
     
 ## Third Model: Random Forest 
 ```{r Random Forest, message=FALSE, warning=FALSE, echo=FALSE}
-
+set.seed(3)
 rmse_frame_forest=foreach(x=1:10, .combine='rbind')%do%{
 x = initial_split(table, prop = 0.8)
 omit_train = training(x)
@@ -199,7 +200,7 @@ as 10000, shrinkage as 0.01,and with a interaction depth of 4.
 
 ## Fourth Model: Gradient Boosting
 ```{r Gradient Boosting, message=FALSE, warning=FALSE, echo=FALSE}
-
+set.seed(4)
 rmse_frame_gbm=foreach(x=1:10, .combine='rbind')%do%{
 x = initial_split(table, prop = 0.8)
 omit_train = training(x)
@@ -221,6 +222,7 @@ validate_RMSE_gbm = mean(rmse_frame_gbm$V1)
 
 ## Fifth Model: Lasso Model
 ```{r Lasso, message=FALSE, warning=FALSE, echo=FALSE}
+set.seed(5)
 x <- model.matrix(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + as.factor(zipcode),
                   data = table)[,-1] 
 #[, -1] excludes first col (intercept)
