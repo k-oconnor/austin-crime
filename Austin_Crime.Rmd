@@ -176,9 +176,6 @@ rownames(validate_RMSE_logit) <- "Logit"
 kable(validate_RMSE_logit)
 ```
 
-
-
-
 ## Second Model: Stepwise Selection
 ```{r Stepwise, message=FALSE, warning=FALSE, echo=FALSE}
 set.seed(2)
