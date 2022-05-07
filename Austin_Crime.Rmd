@@ -10,7 +10,6 @@ library(tidyverse)
 library(mosaic)
 library(ggplot2)
 library(dplyr)
-library(stringr)
 library(tidyr)
 library(ggmap)
 library(geojsonio)
@@ -27,6 +26,8 @@ library(rpart)
 library(rpart.plot)
 library(gbm)
 library(randomForest)
+library(glmnet)
+library(kableExtra)
 ```
 
 # Data Visualization
@@ -206,37 +207,9 @@ validate_RMSE_gbm = mean(rmse_frame_gbm$V1)
 
 ```
 
-## Sixth Model: KNN Model (error out)
-```{r KNN, message=FALSE, warning=FALSE, echo=FALSE}
-trctrl <- trainControl(method = "cv",
-                       number = 5,
-                       savePredictions=TRUE,
-                       allowParallel = TRUE,
-                       classProbs = TRUE)
-crime_knn1 <- train(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
-                    data = crime_train,
-                    method = "knn", 
-                    trControl = trctrl,
-                    family = "binomial",
-                    tuneLength=20)
-
-crime_knn_rmse <- data.frame(matrix(c(
-crime_knn1$results[crime_knn1$results$RMSE == crime_knn1$results$RMSE %>% min, 1] %>% as.integer(), 
-crime_knn1$results[crime_knn1$results$RMSE == crime_knn1$results$RMSE %>% min, 2]), nrow = 2)) 
-
-colnames(crime_knn_rmse) = c("knn")
-rownames(crime_knn_rmse) = c('k', "RMSE")
-kable(crime_knn_rmse)
-
-crime.knn <- knnreg(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
-                    k = 5,
-                    data = crime_train)
-
-```
-
-## Seventh Model: Lasso Model
+## Fifth Model: Lasso Model
 ```{r Lasso, message=FALSE, warning=FALSE, echo=FALSE}
-x <- model.matrix(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+x <- model.matrix(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + as.factor(zipcode),
                   data = table)[,-1] 
 #[, -1] excludes first col (intercept)
 
@@ -244,11 +217,16 @@ x <- scale(x, center = TRUE, scale = TRUE)
 y <- table$clearance_status %>% as.factor()
 grid <- 10^seq(10, -2, length = 100)
 lasso.mod <- glmnet(x, y, alpha = 1, lambda = grid, family = "binomial")
-cv.out <- cv.glmnet(x, y, alpha = 1, family = "binomial")
+cv.out <- cv.glmnet(x, y, alpha = 1, family = "binomial", folds=20)
 bestlam <- cv.out$lambda.min
 
 plot(lasso.mod)
 title("Figure 1: Lasso Coefficients as a Function of L1 Norm", line = 3)
+
+
+
+
+
 ```
 
 ```{r Lasso2, warning=FALSE, echo=FALSE}
@@ -264,21 +242,17 @@ lasso.coef <- predict(lasso.mod,
 LassoCoef <- as.data.table(as.matrix(lasso.coef), keep.rownames = TRUE)
 kable(LassoCoef, col.names = c("Predictor", "Estimate"), caption = "**Table 1 Lasso Model Predictor Estimates**", format_caption = c("italic", "underline")) %>%
     kable_styling(bootstrap_options = "striped", full_width = F)
+
+
+mse = min(cv.out$cvm)
+rmse = sqrt(mse)
+# .9014
+
+
 ```
 
 
-## RMSE not done yet
+## Confusion Matrix for the best model...
 ```{r rmse, message=FALSE, warning=FALSE, echo=FALSE}
-crime_rmse <- data.frame(
-modelr::rmse(crime_logit, crime_test),
-modelr::rmse(crime_step, crime_test),
-modelr::rmse(crime_tree1, crime_test),
-modelr::rmse(crime.prune, crime_test),
-modelr::rmse(crime_forest1, crime_test),
-modelr::rmse(crime.gbs, crime_test),
-modelr::rmse(crime.knn, crime_test),
-modelr::rmse(lasso.mod, crime_test))
-colnames(crime_rmse) = c("Logit", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBM", "knn", "Lasso")
-rownames(crime_rmse) = "RMSE"
-kable(crime_rmse)
+
 ```
