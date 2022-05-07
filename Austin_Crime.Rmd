@@ -132,6 +132,17 @@ kable(vars_of_interest, caption = "Data Dictionary")
 
 # Models
 ## First Model: Logistic Regression
+
+We started modeling by recoding dependent variable `clearance_status` to take on the unit value if crime is cleared by arrest and zero otherwise. Also, we dropped all nulls before creating a train/test split with 80 percent of the data going to the training set, while the remaining 20 percent ending up in the testing set data. In our analysis, we chose to include population density, median income, median home price, white population share, and arrest rate as independent variables. The resulting model is 
+\
+&nbsp;
+  $$
+  P(clearance_status = 1 \mid x_{i,t}) = \beta_0 + \beta_1 population_density_{i,t} + \beta_2 median_income_{i,t} + \beta_3 median_home_value_{i,t} + \beta_3 prop_white_{i,t} + \beta_4 arrest_rate _{i,t}
+  $$
+\
+&nbsp;
+The results reveal that `arrest rate`, `median home price`, and `white population share` are highly significant in predicting `clearance_status`, so they should be included in the model. Then, out of sample root mean square error (RMSE) is calculated as a measure of the model’s out of sample performance. RMSE will be used to compare across all models, and the lower, the better.
+
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
 <<<<<<< HEAD
 =======
