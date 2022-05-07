@@ -104,6 +104,17 @@ ggplot() + geom_polygon(data = tx_sub, aes(fill = prop_white, x = long, y = lat,
 ggplot() + geom_polygon(data = tx_sub, aes(fill = arrest_rate, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Normalized Proportion of Police Reports Leading to Arrest in Austin Zipcodes")
 ```
 
+# Question: Does Race play a part in the prevailing arrest rate?
+## Some Visualizations...
+```{r Ethnicity Effects, message=FALSE, warning=FALSE, echo=FALSE}
+
+
+ggplot(data = zip) + geom_point(aes(x=prop_white, y=arrest_rate, color = population_density)) +theme_linedraw()+ ggtitle("Proportion of Residents Who are White vs. Normalized Arrest Rate")
+ggplot(data=zip) + geom_point(aes(x=prop_white, y=median_home_value))+theme_linedraw()+ ggtitle("Proportion of Residents Who are White vs. Median Home Value")
+ggplot(data=zip) + geom_point(aes(x=population_density, y=arrest_rate))+theme_linedraw()+ ggtitle("Normalized Arrest Rate vs ZipCode Population Density(People/Sq Mile)")
+
+```
+
 # Models
 ## First Model: Logistic Regression
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
@@ -303,3 +314,5 @@ forest_auc = auc(validation$clearance_status,pred)
 ## .667
 
 ```
+
+
