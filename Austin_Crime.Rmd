@@ -93,7 +93,7 @@ ggplot() + geom_polygon(data = tx_sub, aes(fill = arrest_rate, x = long, y = lat
 # Models
 ## First Model: Logistic Regression
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
-table <- merge(obs, zip, by = "zipcode")
+table <- merge(obs, zip, by = "zipcode") %>% drop_na()
 
 crime <- initial_split(table, prob = 0.8)
 crime_train <- training(crime)
@@ -113,9 +113,9 @@ rmse(crime_logit, crime_test)
 kable(table %>% group_by(zipcode) %>% summarize(count = n()) %>% rbind(data.frame(zipcode = "total", count = 17502)))
 ```
 
-## Variable Selection stepwise
+## Second Model: Stepwise Selection
 ```{r Stepwise, message=FALSE, warning=FALSE, echo=FALSE}
-# crime_step <- step(crime_logit, scope=~(.)^2)
+crime_step <- step(crime_logit, scope=~(.)^2)
 
 # stepwise function chose the following model
 crime_step <- glm(clearance_status ~ population_density + median_income + median_home_value + 
@@ -128,11 +128,12 @@ crime_step <- glm(clearance_status ~ population_density + median_income + median
 In terms of the types of models, we started with a baseline logistic regression model, with the specification of clearance_status on everything else. After that, using the stepwise variable selection function, we computed the best set of variables and the interaction between them which performed the best. The logistic model chose by the stepwise function is 
 
 `clearance_status ~ population_density + median_income + median_home_value + 
-    prop_white + arrest_rate + zipcode + population_density:median_income + 
-    median_home_value:arrest_rate + median_income:median_home_value + 
-    median_income:prop_white, data = crime_train, family = binomial)`
+    prop_white + arrest_rate + zipcode + median_home_value:arrest_rate + 
+    median_income:arrest_rate + median_home_value:zipcode + median_income:prop_white + 
+    prop_white:arrest_rate + arrest_rate:zipcode + population_density:prop_white + 
+    population_density:median_home_value + population_density:arrest_rate`
     
-## Second Model: Tree
+## Third Model: Tree
 ```{r Tree, message=FALSE, warning=FALSE, echo=FALSE}
 trctrl <- trainControl(method = "cv", number = 5, savePredictions=TRUE)
 
@@ -158,15 +159,14 @@ prune_1se = function(my_tree) {
 crime.prune <- prune_1se(crime.tree)
 ```
 
-## Third Model: Random Forest (error out)
+## Fourth Model: Random Forest 
 ```{r Random Forest, message=FALSE, warning=FALSE, echo=FALSE}
-trctrl <- trainControl(method = "cv", number = 5, savePredictions=TRUE)
-
-crime_train$clearance_status <- factor(crime_train$clearance_status, labels = c("yes", "no"))
+trctrl <- trainControl(method = "cv", number = 5, savePredictions=TRUE, allowParallel = TRUE, classProbs = TRUE)
 
 crime_forest1 <- train(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
                        data = crime_train,
                        method = "rf",
+                       family = "binomial",
                        trControl=trctrl,
                        prox=TRUE, tuneLength=1)
 
@@ -186,7 +186,7 @@ crime.forest <- randomForest(clearance_status ~ population_density + median_inco
 We repeated the process for gradient boosted models. We used Gradient Boosting models with distribution as "gaussian", the number of trees 
 as 10000, shrinkage as 0.01,and with a interaction depth of 4.
 
-## Fourth Model: Gradient Boosting
+## Fifth Model: Gradient Boosting
 ```{r Gradient Boosting, message=FALSE, warning=FALSE, echo=FALSE}
 crime_gbm1 <- gbm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
                   data = crime_train,
@@ -203,31 +203,79 @@ crime.gbs <- gbm(clearance_status ~ population_density + median_income + median_
                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
 ```
 
-## Fifth Model: KNN Model (error out)
+## Sixth Model: KNN Model (error out)
 ```{r KNN, message=FALSE, warning=FALSE, echo=FALSE}
-trctrl <- trainControl(method = "cv", number = 5, savePredictions=TRUE)
+trctrl <- trainControl(method = "cv",
+                       number = 5,
+                       savePredictions=TRUE,
+                       allowParallel = TRUE,
+                       classProbs = TRUE)
 crime_knn1 <- train(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
                     data = crime_train,
-                    method = "knn", trControl=trctrl, tuneLength=20)
+                    method = "knn", 
+                    trControl = trctrl,
+                    family = "binomial",
+                    tuneLength=20)
 
 crime_knn_rmse <- data.frame(matrix(c(
 crime_knn1$results[crime_knn1$results$RMSE == crime_knn1$results$RMSE %>% min, 1] %>% as.integer(), 
 crime_knn1$results[crime_knn1$results$RMSE == crime_knn1$results$RMSE %>% min, 2]), nrow = 2)) 
 
+colnames(crime_knn_rmse) = c("knn")
+rownames(crime_knn_rmse) = c('k', "RMSE")
+kable(crime_knn_rmse)
+
+crime.knn <- knnreg(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+                    k = 5,
+                    data = crime_train)
+
 ```
 
-## Sixth Model: Lasso Model (not done yet)
+## Seventh Model: Lasso Model
 ```{r Lasso, message=FALSE, warning=FALSE, echo=FALSE}
 x <- model.matrix(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
                   data = table)[,-1] 
 #[, -1] excludes first col (intercept)
 
 x <- scale(x, center = TRUE, scale = TRUE) 
-y <- table$clearance_status
+y <- table$clearance_status %>% as.factor()
 grid <- 10^seq(10, -2, length = 100)
-lasso.mod <- glmnet(x, y, alpha = 1, lambda = grid)
-cv.out <- cv.glmnet(x, y, alpha = 1)
+lasso.mod <- glmnet(x, y, alpha = 1, lambda = grid, family = "binomial")
+cv.out <- cv.glmnet(x, y, alpha = 1, family = "binomial")
 bestlam <- cv.out$lambda.min
 
 plot(lasso.mod)
 title("Figure 1: Lasso Coefficients as a Function of L1 Norm", line = 3)
+```
+
+```{r Lasso2, warning=FALSE, echo=FALSE}
+plot(cv.out)
+title("Figure 2: Mean-Squared Error as a Function of log Lambda", line = 3)
+```
+
+```{r Lasso3, warning=FALSE, echo=FALSE}
+lasso.coef <- predict(lasso.mod,
+                      type = "coefficients",
+                      s = bestlam)
+
+LassoCoef <- as.data.table(as.matrix(lasso.coef), keep.rownames = TRUE)
+kable(LassoCoef, col.names = c("Predictor", "Estimate"), caption = "**Table 1 Lasso Model Predictor Estimates**", format_caption = c("italic", "underline")) %>%
+    kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+
+## RMSE not done yet
+```{r rmse, message=FALSE, warning=FALSE, echo=FALSE}
+crime_rmse <- data.frame(
+modelr::rmse(crime_logit, crime_test),
+modelr::rmse(crime_step, crime_test),
+modelr::rmse(crime_tree1, crime_test),
+modelr::rmse(crime.prune, crime_test),
+modelr::rmse(crime_forest1, crime_test),
+modelr::rmse(crime.gbs, crime_test),
+modelr::rmse(crime.knn, crime_test),
+modelr::rmse(lasso.mod, crime_test))
+colnames(crime_rmse) = c("Logit", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBM", "knn", "Lasso")
+rownames(crime_rmse) = "RMSE"
+kable(crime_rmse)
+```
