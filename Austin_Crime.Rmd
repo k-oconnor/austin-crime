@@ -320,9 +320,10 @@ FPR = (confusion_out[1,2]/(confusion_out[1,1]+confusion_out[1,2]))
 confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
 }
 
+gbm_accuracy = (6014+51)/(6014+1023+32+51) # 85.2% accuracy
 
 confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for GBM Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
-
+accurac7120
 gbm_auc = auc(crime_test$clearance_status,pred)
 ## .669
 ```
