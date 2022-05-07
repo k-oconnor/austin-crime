@@ -133,6 +133,10 @@ kable(vars_of_interest, caption = "Data Dictionary")
 # Models
 ## First Model: Logistic Regression
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
+<<<<<<< HEAD
+=======
+set.seed(1)
+>>>>>>> b89a03112af8b02006870598a7e4b90adca6ad06
 
 x <- initial_split(table, prob = 0.8)
 crime_train <- training(x)
@@ -152,9 +156,13 @@ crime_test <- testing(x)
 
 modelr::rmse(crime_logit,crime_test)
 } %>% as.data.frame
-validate_RMSE_logit = mean(rmse_frame_logit$V1)
-## Validated RMSEout of 2.16
+# validate_RMSE_logit <- mean(rmse_frame_logit$V1)
+## Validated RMSEout of 2.03
 
+validate_RMSE_logit <- data.frame(mean(rmse_frame_logit$V1))
+colnames(validate_RMSE_logit) <- "RMSE"
+rownames(validate_RMSE_logit) <- "Logit" 
+kable(validate_RMSE_logit)
 ```
 
 
@@ -162,6 +170,7 @@ validate_RMSE_logit = mean(rmse_frame_logit$V1)
 
 ## Second Model: Stepwise Selection
 ```{r Stepwise, message=FALSE, warning=FALSE, echo=FALSE}
+set.seed(2)
 #crime_step <- step(crime_logit, scope=~(.)^2)
 # stepwise function chose the following model
 crime_step <- glm(clearance_status ~ population_density + median_income + median_home_value + 
@@ -178,9 +187,13 @@ crime_test <- testing(x)
 
 modelr::rmse(crime_step,crime_test)
 } %>% as.data.frame
-validate_RMSE_step = mean(rmse_frame_step$V1)
+# validate_RMSE_step = mean(rmse_frame_step$V1)
 ## Validated RMSEout of 2.26
 
+validate_RMSE_step <- data.frame(mean(rmse_frame_step$V1))
+colnames(validate_RMSE_step) <- "RMSE"
+rownames(validate_RMSE_step) <- "Stepwise Selection" 
+kable(validate_RMSE_step)
 ```
 
 In terms of the types of models, we started with a baseline logistic regression model, with the specification of clearance_status on everything else. After that, using the stepwise variable selection function, we computed the best set of variables and the interaction between them which performed the best. The logistic model chose by the stepwise function is 
@@ -193,7 +206,7 @@ In terms of the types of models, we started with a baseline logistic regression 
     
 ## Third Model: Random Forest 
 ```{r Random Forest, message=FALSE, warning=FALSE, echo=FALSE}
-
+set.seed(3)
 rmse_frame_forest=foreach(x=1:10, .combine='rbind')%do%{
 x = initial_split(table, prop = 0.8)
 omit_train = training(x)
@@ -205,8 +218,13 @@ crime_forest <- randomForest(clearance_status ~ population_density + median_inco
 
 modelr::rmse(crime_forest,omit_test)
 } %>% as.data.frame
-validate_RMSE_forest = mean(rmse_frame_forest$V1) 
+# validate_RMSE_forest = mean(rmse_frame_forest$V1) 
 ## Validated RMSEout of .353
+
+validate_RMSE_forest <- data.frame(mean(rmse_frame_forest$V1))
+colnames(validate_RMSE_forest) <- "RMSE"
+rownames(validate_RMSE_forest) <- "Random Forest" 
+kable(validate_RMSE_forest)
 ```
 
 We repeated the process for gradient boosted models. We used Gradient Boosting models with distribution as "gaussian", the number of trees 
@@ -214,7 +232,7 @@ as 10000, shrinkage as 0.01,and with a interaction depth of 4.
 
 ## Fourth Model: Gradient Boosting
 ```{r Gradient Boosting, message=FALSE, warning=FALSE, echo=FALSE}
-
+set.seed(4)
 rmse_frame_gbm=foreach(x=1:10, .combine='rbind')%do%{
 x = initial_split(table, prop = 0.8)
 omit_train = training(x)
@@ -229,13 +247,18 @@ crime_gbm <- gbm(clearance_status ~ population_density + median_income + median_
 
 modelr::rmse(crime_gbm,omit_test)
 } %>% as.data.frame
-validate_RMSE_gbm = mean(rmse_frame_gbm$V1) 
+# validate_RMSE_gbm = mean(rmse_frame_gbm$V1) 
 ## RMSEout of .351
 
+validate_RMSE_gbm <- data.frame(mean(rmse_frame_gbm$V1))
+colnames(validate_RMSE_gbm) <- "RMSE"
+rownames(validate_RMSE_gbm) <- "Gradient Boosting" 
+kable(validate_RMSE_gbm)
 ```
 
 ## Fifth Model: Lasso Model
 ```{r Lasso, message=FALSE, warning=FALSE, echo=FALSE}
+set.seed(5)
 x <- model.matrix(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + as.factor(zipcode),
                   data = table)[,-1] 
 #[, -1] excludes first col (intercept)
@@ -272,8 +295,11 @@ kable(LassoCoef, col.names = c("Predictor", "Estimate"), caption = "**Table 1 La
 
 mse = min(cv.out$cvm)
 rmse = sqrt(mse)
-# .9014
-
+# .9062
+validate_RMSE_lasso <- data.frame(sqrt(mse))
+colnames(validate_RMSE_lasso) <- "RMSE"
+rownames(validate_RMSE_lasso) <- "Lasso" 
+kable(validate_RMSE_lasso)
 
 ```
 
