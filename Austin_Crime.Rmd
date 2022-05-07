@@ -67,6 +67,11 @@ tx <- geojson_read("tx_zip_geo.json", what = "sp")
 table <- merge(obs, zip, by = "zipcode") %>% drop_na()
 table$zipcode = as.factor(table$zipcode)
 
+## We want to set some data aside for validation at the end.. so we conduct a split..
+x <- initial_split(table, prob = 0.9)
+table <- training(x)
+validation <- testing(x)
+
 
 ```
 
@@ -115,7 +120,7 @@ crime_logit <- glm(clearance_status ~ population_density + median_income + media
 modelr::rmse(crime_logit,crime_test)
 } %>% as.data.frame
 validate_RMSE_logit = mean(rmse_frame_logit$V1)
-## Validated RMSEout of 2.033
+## Validated RMSEout of 2.16
 
 
 phat_test_crime <- predict(crime_logit, crime_test, type='response')
@@ -152,7 +157,7 @@ crime_step <- glm(clearance_status ~ population_density + median_income + median
 modelr::rmse(crime_step,crime_test)
 } %>% as.data.frame
 validate_RMSE_step = mean(rmse_frame_step$V1)
-## Validated RMSEout of 2.2
+## Validated RMSEout of 2.26
 
 ```
 
@@ -179,7 +184,7 @@ crime_forest <- randomForest(clearance_status ~ population_density + median_inco
 modelr::rmse(crime_forest,omit_test)
 } %>% as.data.frame
 validate_RMSE_forest = mean(rmse_frame_forest$V1) 
-## Validated RMSEout of .352!!
+## Validated RMSEout of .353
 ```
 
 We repeated the process for gradient boosted models. We used Gradient Boosting models with distribution as "gaussian", the number of trees 
@@ -203,7 +208,7 @@ crime_gbm <- gbm(clearance_status ~ population_density + median_income + median_
 modelr::rmse(crime_gbm,omit_test)
 } %>% as.data.frame
 validate_RMSE_gbm = mean(rmse_frame_gbm$V1) 
-## RMSEout of .3495
+## RMSEout of .351
 
 ```
 
@@ -223,10 +228,6 @@ bestlam <- cv.out$lambda.min
 plot(lasso.mod)
 title("Figure 1: Lasso Coefficients as a Function of L1 Norm", line = 3)
 
-
-
-
-
 ```
 
 ```{r Lasso2, warning=FALSE, echo=FALSE}
@@ -235,6 +236,9 @@ title("Figure 2: Mean-Squared Error as a Function of log Lambda", line = 3)
 ```
 
 ```{r Lasso3, warning=FALSE, echo=FALSE}
+table <- merge(obs, zip, by = "zipcode") %>% drop_na()
+table$zipcode = as.factor(table$zipcode)
+
 lasso.coef <- predict(lasso.mod,
                       type = "coefficients",
                       s = bestlam)
@@ -254,5 +258,22 @@ rmse = sqrt(mse)
 
 ## Confusion Matrix for the best model...
 ```{r rmse, message=FALSE, warning=FALSE, echo=FALSE}
+
+pred =predict(crime_gbm,newdata=validation)
+confusion_table = data.frame(fold_id=integer(),TPR=integer(),FPR=integer())
+
+level = seq(.05,.5,by=.05)
+
+confusion_level=foreach(x=level)%do%{
+yhat_test = ifelse(pred > x,1,0)
+confusion_out = table(y=validation$clearance_status, yhat = yhat_test)
+TPR = (confusion_out[2,2]/(confusion_out[2,1]+confusion_out[2,2]))
+FPR = (confusion_out[1,2]/(confusion_out[1,1]+confusion_out[1,2]))
+confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
+}
+
+
+confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for GBM Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
+
 
 ```
