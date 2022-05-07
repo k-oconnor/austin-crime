@@ -60,6 +60,13 @@ zip$zipcode <- as.character(zip$zipcode)
 
 tx <- geojson_read("tx_zip_geo.json", what = "sp")
 
+
+## Final cleaning steps: Encoding zip as a factor with 45 levels, and dropping NA values
+## Resulting in 27459 observations remaining
+table <- merge(obs, zip, by = "zipcode") %>% drop_na()
+table$zipcode = as.factor(table$zipcode)
+
+
 ```
 
 # Data Visualization
@@ -93,14 +100,22 @@ ggplot() + geom_polygon(data = tx_sub, aes(fill = arrest_rate, x = long, y = lat
 # Models
 ## First Model: Logistic Regression
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
-table <- merge(obs, zip, by = "zipcode") %>% drop_na()
 
-crime <- initial_split(table, prob = 0.8)
-crime_train <- training(crime)
-crime_test <- testing(crime)
+
+rmse_frame_logit=foreach(x=1:10, .combine='rbind')%do%{
+
+x <- initial_split(table, prob = 0.8)
+crime_train <- training(x)
+crime_test <- testing(x)
 
 crime_logit <- glm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
                    data = crime_train, family = binomial)
+
+modelr::rmse(crime_logit,crime_test)
+} %>% as.data.frame
+validate_RMSE_logit = mean(rmse_frame_logit$V1)
+## Validated RMSEout of 2.033
+
 
 phat_test_crime <- predict(crime_logit, crime_test, type='response')
 yhat_test_crime <- ifelse(phat_test_crime > 0.5, 1, 0)
@@ -108,20 +123,35 @@ confusion_out_logit <- table(y = crime_test$clearance_status,
                              yhat = yhat_test_crime)
 accuracy <- (confusion_out_logit[1,1] + confusion_out_logit[2,2])/sum(confusion_out_logit)
 
-rmse(crime_logit, crime_test)
+
 
 kable(table %>% group_by(zipcode) %>% summarize(count = n()) %>% rbind(data.frame(zipcode = "total", count = 17502)))
 ```
 
+
+
+
 ## Second Model: Stepwise Selection
 ```{r Stepwise, message=FALSE, warning=FALSE, echo=FALSE}
-crime_step <- step(crime_logit, scope=~(.)^2)
+#crime_step <- step(crime_logit, scope=~(.)^2)
+
+rmse_frame_step=foreach(x=1:10, .combine='rbind')%do%{
+
+x <- initial_split(table, prob = 0.8)
+crime_train <- training(x)
+crime_test <- testing(x)
+
 
 # stepwise function chose the following model
 crime_step <- glm(clearance_status ~ population_density + median_income + median_home_value + 
     prop_white + arrest_rate + zipcode + population_density:median_income + 
     median_home_value:arrest_rate + median_income:median_home_value + 
     median_income:prop_white, data = crime_train, family = binomial)
+
+modelr::rmse(crime_step,crime_test)
+} %>% as.data.frame
+validate_RMSE_step = mean(rmse_frame_step$V1)
+## Validated RMSEout of 2.2
 
 ```
 
@@ -133,74 +163,47 @@ In terms of the types of models, we started with a baseline logistic regression 
     prop_white:arrest_rate + arrest_rate:zipcode + population_density:prop_white + 
     population_density:median_home_value + population_density:arrest_rate`
     
-## Third Model: Tree
-```{r Tree, message=FALSE, warning=FALSE, echo=FALSE}
-trctrl <- trainControl(method = "cv", number = 5, savePredictions=TRUE)
-
-crime_tree1 <- train(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
-                     data = crime_train,
-                     method = "rpart",
-                     trControl = trctrl,
-                     tuneLength = 0)
-
-crime_tree1$results$RMSE
-
-crime.tree <- rpart(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode, 
-                    data = crime_train,
-                    control = rpart.control(cp = 0.002, minsplit=30))
-
-prune_1se = function(my_tree) {
-  out = as.data.frame(my_tree$cptable)
-  thresh = min(out$xerror + out$xstd)
-  cp_opt = max(out$CP[out$xerror <= thresh])
-  prune(my_tree, cp=cp_opt)
-}
-
-crime.prune <- prune_1se(crime.tree)
-```
-
-## Fourth Model: Random Forest 
+## Third Model: Random Forest 
 ```{r Random Forest, message=FALSE, warning=FALSE, echo=FALSE}
-trctrl <- trainControl(method = "cv", number = 5, savePredictions=TRUE, allowParallel = TRUE, classProbs = TRUE)
 
-crime_forest1 <- train(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
-                       data = crime_train,
-                       method = "rf",
-                       family = "binomial",
-                       trControl=trctrl,
-                       prox=TRUE, tuneLength=1)
+rmse_frame_forest=foreach(x=1:10, .combine='rbind')%do%{
+x = initial_split(table, prop = 0.8)
+omit_train = training(x)
+omit_test = testing(x)
 
-crime_forest_rmse <- data.frame(
-crime_forest1$results$RMSE
-)
-
-colnames(crime_forest_rmse) = c("Random Forest")
-rownames(crime_forest_rmse) = "RMSE"
-kable(crime_forest_rmse)
-
-crime.forest <- randomForest(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
-                    data = crime_train,
+crime_forest <- randomForest(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+                    data = omit_train,
                     importance = TRUE, na.action = na.omit)
+
+modelr::rmse(crime_forest,omit_test)
+} %>% as.data.frame
+validate_RMSE_forest = mean(rmse_frame_forest$V1) 
+## Validated RMSEout of .352!!
 ```
 
 We repeated the process for gradient boosted models. We used Gradient Boosting models with distribution as "gaussian", the number of trees 
 as 10000, shrinkage as 0.01,and with a interaction depth of 4.
 
-## Fifth Model: Gradient Boosting
+## Fourth Model: Gradient Boosting
 ```{r Gradient Boosting, message=FALSE, warning=FALSE, echo=FALSE}
-crime_gbm1 <- gbm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
-                  data = crime_train,
-                  distribution = "gaussian",
-                  n.trees = 10000,
-                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
 
-crime_gbm1$cv.error %>% mean %>% sqrt
+rmse_frame_gbm=foreach(x=1:10, .combine='rbind')%do%{
+x = initial_split(table, prop = 0.8)
+omit_train = training(x)
+omit_test = testing(x)
 
-crime.gbs <- gbm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
+
+crime_gbm <- gbm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
                  data = crime_train,
                  distribution = "gaussian",
-                 n.trees = 10000,
-                 shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
+                 n.trees = 500,
+                 shrinkage = 0.01, interaction.depth = 4, cv.folds = 2)
+
+modelr::rmse(crime_gbm,omit_test)
+} %>% as.data.frame
+validate_RMSE_gbm = mean(rmse_frame_gbm$V1) 
+## RMSEout of .3495
+
 ```
 
 ## Sixth Model: KNN Model (error out)
