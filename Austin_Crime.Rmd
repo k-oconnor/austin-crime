@@ -269,7 +269,7 @@ rmse = sqrt(mse)
 
 
 ## Confusion Matrix for the best model...
-```{r rmse, message=FALSE, warning=FALSE, echo=FALSE}
+```{r Validation_GBM, message=FALSE, warning=FALSE, echo=FALSE}
 
 pred =predict(crime_gbm,newdata=validation)
 confusion_table = data.frame(fold_id=integer(),TPR=integer(),FPR=integer())
@@ -291,7 +291,7 @@ gbm_auc = auc(validation$clearance_status,pred)
 ## .669
 ```
 ## Confusion Matrix for the second best model...
-```{r rmse, message=FALSE, warning=FALSE, echo=FALSE}
+```{r Validation_RF, message=FALSE, warning=FALSE, echo=FALSE}
 
 pred =predict(crime_forest,newdata=validation)
 confusion_table = data.frame(fold_id=integer(),TPR=integer(),FPR=integer())
@@ -307,7 +307,7 @@ confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
 }
 
 
-confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for GBM Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
+confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for Random Forest Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
 
 
 forest_auc = auc(validation$clearance_status,pred)
