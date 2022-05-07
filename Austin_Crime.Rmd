@@ -81,13 +81,13 @@ tx_sub <- na.omit(tx_sub)
 ```{r Data Cleaning, message=FALSE, warning=FALSE, echo=FALSE}
 options(scipen = 10000)
 
-ggplot() + geom_polygon(data = tx_sub, aes(fill = median_income, x = long, y = lat, group = group,), color = 'black')
+ggplot() + geom_polygon(data = tx_sub, aes(fill = median_income, x = long, y = lat, group = group,), color = 'black') + ggtitle("Median Income in Austin Area Zipcodes (USD)")
 
-ggplot() + geom_polygon(data = tx_sub, aes(fill = median_home_value, x = long, y = lat, group = group,), color = 'black')
+ggplot() + geom_polygon(data = tx_sub, aes(fill = median_home_value, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Median Home Value in Austin Area Zipcodes (USD)")
 
-ggplot() + geom_polygon(data = tx_sub, aes(fill = prop_white, x = long, y = lat, group = group,), color = 'black')
+ggplot() + geom_polygon(data = tx_sub, aes(fill = prop_white, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Proportion of Population that is White in Austin Zipcodes")
 
-ggplot() + geom_polygon(data = tx_sub, aes(fill = arrest_rate, x = long, y = lat, group = group,), color = 'black')
+ggplot() + geom_polygon(data = tx_sub, aes(fill = arrest_rate, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Normalized Proportion of Police Reports Leading to Arrest in Austin Zipcodes")
 ```
 
 # Models
