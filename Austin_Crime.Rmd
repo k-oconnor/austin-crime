@@ -113,6 +113,7 @@ ggplot(data = zip) + geom_point(aes(x=prop_white, y=arrest_rate, color = populat
 ggplot(data=zip) + geom_point(aes(x=prop_white, y=median_home_value))+theme_linedraw()+ ggtitle("Proportion of Residents Who are White vs. Median Home Value")
 ggplot(data=zip) + geom_point(aes(x=population_density, y=arrest_rate))+theme_linedraw()+ ggtitle("Normalized Arrest Rate vs ZipCode Population Density(People/Sq Mile)")
 
+
 ```
 
 # Models
@@ -316,3 +317,15 @@ forest_auc = auc(validation$clearance_status,pred)
 ```
 
 
+```{r Validation_RF, message=FALSE, warning=FALSE, echo=FALSE}
+## Variable Importance Plots
+
+vi = varImpPlot(crime_forest, type=1)
+
+omit_test = as.data.frame(table)
+partialPlot(crime_forest, table, 'prop_white')
+partialPlot(crime_forest, table, 'median_home_value')
+partialPlot(crime_forest, table, 'median_income')
+partialPlot(crime_forest, table, 'population_density')
+
+```
