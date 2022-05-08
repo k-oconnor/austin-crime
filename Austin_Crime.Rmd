@@ -43,12 +43,9 @@ The motivation of this study is to build a model that accurately predicts the ou
 
 However, as more data regarding criminal action becomes publicly available, it is increasingly important that we build predictive models to understand the true magnitude of these external factors' influence on legal decisions. This paper is organized as follows. In Section 2, we describe the data used for our analysis and provide some initial visualizations. In Section 3, we present our statistical models, namely: Logistic, Stepwise Selection, Random Forest, Gradient Boosting, and Lasso. In Section 4 , we compare the performance of our models using confusion matrices and select the best performing model. Finally, we summarize our results and conclusions in Section 5.
 
-
-
-
 # Data 
 ## Feature Engineering and Data Loading
-```{r Data Cleaning, message=FALSE, warning=FALSE, echo=FALSE}
+```{r Data Cleaning, echo=TRUE, message=FALSE, warning=FALSE}
 obs <- read_csv("austin_crime.csv")
 
 # Encode the crime target variable of interest
@@ -176,7 +173,7 @@ We started modeling by recoding dependent variable `clearance_status` to take on
 &nbsp;
 The results reveal that `arrest rate`, `median home price`, and `white population share` are highly significant in predicting `clearance_status`, so they should be included in the model. Then, out of sample root mean square error (RMSE) is calculated as a measure of the model’s out of sample performance. RMSE will be used to compare across all models, and the lower, the better.
 
-Each coefficient shows a ceteris paribus effect of every feature on clearance status. For instance, $\beta_{prop \: white}=-0.67 means that as the share of the white population increases by 1 percent, the probability of crime is cleared by arrest declines by 67 percentage points, holding all other features constant. 
+Each coefficient shows a ceteris paribus effect of every feature on clearance status. For instance,  if beta3 =-0.67, it implies that as the share of the white population increases by 1 percent, the probability of crime is cleared by arrest declines by 67 percentage points, holding all other features constant. 
 
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
 set.seed(1)
@@ -387,7 +384,8 @@ logit_auc = auc(crime_test$clearance_status,pred)
 
 ```
 # Appendix
-## Sanity-Check: Variable Importance Plot for RF model
+##Variable Importance Plot for RF model
+
 ```{r Variable Importance, message=FALSE, warning=FALSE, echo=FALSE}
 ## Variable Importance Plots
 
