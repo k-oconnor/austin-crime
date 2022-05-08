@@ -1,6 +1,6 @@
 ---
-title: "Austin_Crime"
-author: "Kevin, Elle, Abigail"
+title: "A Study of Crime Clearance Statistics in Austin, Texas"
+author: "Kevin O'Connor, Elle Khun, Abigail Johnson"
 date: "5/9/2022"
 output:
   pdf_document: default
