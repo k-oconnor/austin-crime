@@ -352,32 +352,6 @@ forest_auc = auc(crime_test$clearance_status,pred)
 
 ```
 
-## ROC Curve for the second best model by RMSEout
-```{r Validation_GBM, message=FALSE, warning=FALSE, echo=FALSE}
-pred <- predict(crime_gbm,newdata=crime_test, type = 'response')
-confusion_table <- data.frame(fold_id=integer(),
-                              TPR=integer(),
-                              FPR=integer())
-
-level <- seq(.1,.5,by=.05)
-
-confusion_level <- foreach(x=level)%do%{
-yhat_test = ifelse(pred > x,1,0)
-confusion_out = table(y=crime_test$clearance_status, yhat = yhat_test)
-TPR = (confusion_out[2,2]/(confusion_out[2,1]+confusion_out[2,2]))
-FPR = (confusion_out[1,2]/(confusion_out[1,1]+confusion_out[1,2]))
-confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
-}
-
-gbm_accuracy = (6014+51)/(6014+1023+32+51) # 85.2% accuracy
-
-confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for GBM Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
-
-gbm_auc = auc(crime_test$clearance_status,pred)
-## .669
-```
-
-
 
 ```{r Variable Importance, message=FALSE, warning=FALSE, echo=FALSE}
 ## Variable Importance Plots
