@@ -214,7 +214,7 @@ kable(validate_RMSE_step)
 ```
     
 ## Third Model: Random Forest 
-The next model performed is random forest. The process involves resampling the data with replacement 500 times and fitting a tree to each one. Then, averaging the predictions of the 500 different trees. However, we can reduce covariance between each tree by using only a subset of the variables. Thus, the 500 trees are diversified and their predictions are less correlated. By introducing more randomness to the process, we can improve both accuracy and prevent over-fitting. The resulting RMSE is 0.3522 which is a significant improvement from the logistic model or stepwise selection.
+The next model performed is random forest. The highlight of tree is that it automatically detect nonlinearities and interactions. So there is no need to include interaction terms. The process involves resampling the data with replacement 500 times and fitting a tree to each one. Then, averaging the predictions of the 500 different trees. However, we can reduce covariance between each tree by using only a subset of the variables. Thus, the 500 trees are diversified and their predictions are less correlated. By introducing more randomness to the process, we can improve both accuracy and prevent over-fitting. The resulting RMSE is 0.3522 which is a significant improvement from the logistic model or stepwise selection.
 
 Figure [figure number here] presents a variable importance plot. It shows that excluding zip code would increase mean square error (MSE) by 26 percent, suggesting that zip code should be included in the model. The process of the calculation involves comparing out-of-bag performance of the model when using the correct zip code versus permuting the zip code for all observations.
 ```{r Random Forest, message=FALSE, warning=FALSE, echo=FALSE}
@@ -241,6 +241,10 @@ kable(validate_RMSE_forest)
 
 
 ## Fourth Model: Gradient Boosting
+Similarly to the random forest model in the previous section, boosting combines many decision trees where each tree is fitted to the residual of the previous tree. However, the fit in each round will be scaled down to constrain it from explaining the full variation in the data. The resulting estimate is the sum of all crushed trees in each round. The highlight of the gradient boosting technique is that it keeps each tree in the ensemble from overfitting just like when random forest restricts the number of features to prevent overfitting.
+
+Boosting requires choosing three main hyper parameters: (1) Number of trees: 500, (2) Shrinkage Parameter: 0.01, and (3) Interaction Depth: 4
+
 ```{r Gradient Boosting, message=FALSE, warning=FALSE, echo=FALSE}
 set.seed(4)
 rmse_frame_gbm=foreach(x=1:10, .combine='rbind')%do%{
@@ -251,14 +255,14 @@ omit_test = testing(x)
 
 crime_gbm <- gbm(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + zipcode,
                  data = crime_train,
-                 distribution = "gaussian",
+                 distribution = "bernoulli",
                  n.trees = 500,
                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 2)
 
 modelr::rmse(crime_gbm,omit_test)
 } %>% as.data.frame
 # validate_RMSE_gbm = mean(rmse_frame_gbm$V1) 
-## RMSEout of .351
+## RMSEout of 1.984
 
 validate_RMSE_gbm <- data.frame(mean(rmse_frame_gbm$V1))
 colnames(validate_RMSE_gbm) <- "RMSE"
