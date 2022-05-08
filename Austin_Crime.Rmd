@@ -137,17 +137,16 @@ We started modeling by recoding dependent variable `clearance_status` to take on
 \
 &nbsp;
   $$
-  P(clearance_status = 1 \mid x_{i,t}) = \beta_0 + \beta_1 population_density_{i,t} + \beta_2 median_income_{i,t} + \beta_3 median_home_value_{i,t} + \beta_3 prop_white_{i,t} + \beta_4 arrest_rate _{i,t}
+  P(clearance \: status = 1 \mid x_{i,t}) = \beta_0 + \beta_1 population \: density_{i,t} + \beta_2 median \: income_{i,t} + \beta_3 median \: home \: value_{i,t} + \beta_3 prop \: white_{i,t} + \beta_4 arrest \: rate _{i,t}
   $$
 \
 &nbsp;
 The results reveal that `arrest rate`, `median home price`, and `white population share` are highly significant in predicting `clearance_status`, so they should be included in the model. Then, out of sample root mean square error (RMSE) is calculated as a measure of the model’s out of sample performance. RMSE will be used to compare across all models, and the lower, the better.
 
+Each coefficient shows a ceteris paribus effect of every feature on clearance status. For instance, $\beta_{prop \: white}=-0.67 means that as the share of the white population increases by 1 percent, the probability of crime is cleared by arrest declines by 67 percentage points, holding all other features constant. 
+
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
-<<<<<<< HEAD
-=======
 set.seed(1)
->>>>>>> b89a03112af8b02006870598a7e4b90adca6ad06
 
 x <- initial_split(table, prob = 0.8)
 crime_train <- training(x)
@@ -168,7 +167,7 @@ crime_test <- testing(x)
 modelr::rmse(crime_logit,crime_test)
 } %>% as.data.frame
 # validate_RMSE_logit <- mean(rmse_frame_logit$V1)
-## Validated RMSEout of 2.03
+## Validated RMSEout of 2.0318
 
 validate_RMSE_logit <- data.frame(mean(rmse_frame_logit$V1))
 colnames(validate_RMSE_logit) <- "RMSE"
@@ -177,14 +176,22 @@ kable(validate_RMSE_logit)
 ```
 
 ## Second Model: Stepwise Selection
+Although the logistic model is simple, it fails to capture context-specific effects by ignoring interaction terms. Stepwise selection computes the best set of variables by including main effects, and pairwise interaction terms that result in the lowest RMSE. The resulting model chosen by stepwise selection is 
+\
+&nbsp;
+    $$
+  P(clearance \: status = 1 \mid x_{i,t}) = \beta_0 + \beta_1 population \: density_{i,t} + \beta_2 median \: income_{i,t} + \beta_3 median \: home \: value_{i,t} + \beta_3 prop \: white_{i,t} + \beta_4 arrest \: rate_{i,t} + \beta_5 median\:home\:value \times arrest\:rate
+  $$
+\
+&nbsp;
+We notice an interaction term in our model. This term allows the effect of a unit change in $median\:home\:value$ to depend on $arrest\:rate$. The coefficient of this interaction term measures the effect on clearance status of an additional dollar of median home value is greater, by the amount $\beta_5$, for each additional percentage point increase in arrest rate.
+
 ```{r Stepwise, message=FALSE, warning=FALSE, echo=FALSE}
 set.seed(2)
-#crime_step <- step(crime_logit, scope=~(.)^2)
+crime_step <- step(crime_logit, scope=~(.)^2)
 # stepwise function chose the following model
 crime_step <- glm(clearance_status ~ population_density + median_income + median_home_value + 
-    prop_white + arrest_rate + zipcode + population_density:median_income + 
-    median_home_value:arrest_rate + median_income:median_home_value + 
-    median_income:prop_white, data = crime_train, family = binomial)
+    prop_white + arrest_rate + median_home_value:arrest_rate, data = crime_train, family = binomial)
 
 rmse_frame_step=foreach(x=1:10, .combine='rbind')%do%{
 
@@ -196,7 +203,7 @@ crime_test <- testing(x)
 modelr::rmse(crime_step,crime_test)
 } %>% as.data.frame
 # validate_RMSE_step = mean(rmse_frame_step$V1)
-## Validated RMSEout of 2.26
+## Validated RMSEout of 2.0254
 
 validate_RMSE_step <- data.frame(mean(rmse_frame_step$V1))
 colnames(validate_RMSE_step) <- "RMSE"
