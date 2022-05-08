@@ -112,7 +112,7 @@ Type <- c("numeric" , "numeric", "numeric", "numeric", "numeric", "numeric", "nu
 
 vars_of_interest <- data.frame(Variable, Description, Type)
 
-kable(vars_of_interest, caption = "Figure (1) Data Dictionary")
+kable(vars_of_interest, caption = "Table (1) Data Dictionary")
 
 ```
 
@@ -162,7 +162,7 @@ Of high interest in today's political landscape is the implications of ethnicity
 
 # Methods
 ## Summary
-To attempt to predict the outcome of 'clearance_status', we will run a model horse race, and select the model that returns the lowest validated RMSEout. To validate each model, we will calculate the RMSEout for a train/test split 10 times, and take the average from the ten samples to provide a more robust estimate for comparison.
+To attempt to predict the outcome of 'clearance_status', we will run a model horse race, and select the model that returns the lowest validated RMSEout. To validate each model, we will calculate the RMSEout for a train/test split 10 times, and take the average from the ten samples to provide a more robust estimate for comparison. After we select the best model, we will generate ROC curves, and calculate AUC.
 
 ## First Model: Logistic Regression
 We started modeling by recoding dependent variable `clearance_status` to take on the unit value if crime is cleared by arrest and zero otherwise. Also, we dropped all nulls before creating a train/test split with 80 percent of the data going to the training set, while the remaining 20 percent ending up in the testing set data. In our analysis, we chose to include population density, median income, median home price, white population share, and arrest rate as independent variables. The resulting model is 
@@ -260,13 +260,8 @@ crime_forest <- randomForest(clearance_status ~ population_density + median_inco
 
 modelr::rmse(crime_forest,omit_test)
 } %>% as.data.frame
-# validate_RMSE_forest = mean(rmse_frame_forest$V1) 
+validate_RMSE_forest = mean(rmse_frame_forest$V1)
 ## Validated RMSEout of .3522
-
-validate_RMSE_forest <- data.frame(mean(rmse_frame_forest$V1))
-colnames(validate_RMSE_forest) <- "RMSE"
-rownames(validate_RMSE_forest) <- "Random Forest" 
-kable(validate_RMSE_forest)
 ```
 
 
@@ -291,13 +286,9 @@ crime_gbm <- gbm(clearance_status ~ population_density + median_income + median_
 
 modelr::rmse(crime_gbm,omit_test)
 } %>% as.data.frame
-# validate_RMSE_gbm = mean(rmse_frame_gbm$V1) 
+validate_RMSE_gbm = mean(rmse_frame_gbm$V1) 
 ## RMSEout of 1.984
 
-validate_RMSE_gbm <- data.frame(mean(rmse_frame_gbm$V1))
-colnames(validate_RMSE_gbm) <- "RMSE"
-rownames(validate_RMSE_gbm) <- "Gradient Boosting" 
-kable(validate_RMSE_gbm)
 ```
 
 ## Fifth Model: Lasso Model
@@ -313,53 +304,30 @@ grid <- 10^seq(10, -2, length = 100)
 lasso.mod <- glmnet(x, y, alpha = 1, lambda = grid, family = "binomial")
 cv.out <- cv.glmnet(x, y, alpha = 1, family = "binomial", folds=20)
 bestlam <- cv.out$lambda.min
-```
-
-
-```{r Lasso3, warning=FALSE, echo=FALSE}
-table <- merge(obs, zip, by = "zipcode") %>% drop_na()
-table$zipcode = as.factor(table$zipcode)
-
-lasso.coef <- predict(lasso.mod,
-                      type = "coefficients",
-                      s = bestlam)
-
-LassoCoef <- as.data.table(as.matrix(lasso.coef), keep.rownames = TRUE)
-kable(LassoCoef, col.names = c("Predictor", "Estimate"), caption = "**Table 1 Lasso Model Predictor Estimates**", format_caption = c("italic", "underline")) %>%
-    kable_styling(bootstrap_options = "striped", full_width = F)
-
 
 mse = min(cv.out$cvm)
 rmse = sqrt(mse)
 # .9062
 ```
 
+# Results
+## Model Performance Summary
+```{r Result Summary, warning=FALSE, echo=FALSE}
+
+# Results
+Model <- c("Logit", "Stepwise Selection", "Random Forest", "Gradient Boosting", "Lasso")
+
+RMSEout <- c("2.03" , "2.04", ".352", "1.984", ".9062")
+
+vars_of_interest <- data.frame(Model, RMSEout)
+
+kable(vars_of_interest, caption = "Table (2) Modeling Results")
+```
+
+Of the five models we tried to run, the random forest model outperformed all others, with a validated RMSEout of .352
+
 
 ## ROC Curve for best model by RMSEout
-```{r Validation_GBM, message=FALSE, warning=FALSE, echo=FALSE}
-pred <- predict(crime_gbm,newdata=crime_test, type = 'response')
-confusion_table <- data.frame(fold_id=integer(),
-                              TPR=integer(),
-                              FPR=integer())
-
-level <- seq(.1,.5,by=.05)
-
-confusion_level <- foreach(x=level)%do%{
-yhat_test = ifelse(pred > x,1,0)
-confusion_out = table(y=crime_test$clearance_status, yhat = yhat_test)
-TPR = (confusion_out[2,2]/(confusion_out[2,1]+confusion_out[2,2]))
-FPR = (confusion_out[1,2]/(confusion_out[1,1]+confusion_out[1,2]))
-confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
-}
-
-gbm_accuracy = (6014+51)/(6014+1023+32+51) # 85.2% accuracy
-
-confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for GBM Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
-
-gbm_auc = auc(crime_test$clearance_status,pred)
-## .669
-```
-## ROC Curve for the second best model by RMSEout
 ```{r Validation_RF, message=FALSE, warning=FALSE, echo=FALSE}
 
 pred =predict(crime_forest,newdata=crime_test)
@@ -383,6 +351,33 @@ forest_auc = auc(crime_test$clearance_status,pred)
 ## .672
 
 ```
+
+## ROC Curve for the second best model by RMSEout
+```{r Validation_GBM, message=FALSE, warning=FALSE, echo=FALSE}
+pred <- predict(crime_gbm,newdata=crime_test, type = 'response')
+confusion_table <- data.frame(fold_id=integer(),
+                              TPR=integer(),
+                              FPR=integer())
+
+level <- seq(.1,.5,by=.05)
+
+confusion_level <- foreach(x=level)%do%{
+yhat_test = ifelse(pred > x,1,0)
+confusion_out = table(y=crime_test$clearance_status, yhat = yhat_test)
+TPR = (confusion_out[2,2]/(confusion_out[2,1]+confusion_out[2,2]))
+FPR = (confusion_out[1,2]/(confusion_out[1,1]+confusion_out[1,2]))
+confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
+}
+
+gbm_accuracy = (6014+51)/(6014+1023+32+51) # 85.2% accuracy
+
+confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for GBM Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
+
+gbm_auc = auc(crime_test$clearance_status,pred)
+## .669
+```
+
+
 
 ```{r Variable Importance, message=FALSE, warning=FALSE, echo=FALSE}
 ## Variable Importance Plots
