@@ -132,7 +132,6 @@ kable(vars_of_interest, caption = "Data Dictionary")
 
 # Models
 ## First Model: Logistic Regression
-
 We started modeling by recoding dependent variable `clearance_status` to take on the unit value if crime is cleared by arrest and zero otherwise. Also, we dropped all nulls before creating a train/test split with 80 percent of the data going to the training set, while the remaining 20 percent ending up in the testing set data. In our analysis, we chose to include population density, median income, median home price, white population share, and arrest rate as independent variables. The resulting model is 
 \
 &nbsp;
@@ -184,7 +183,10 @@ Although the logistic model is simple, it fails to capture context-specific effe
   $$
 \
 &nbsp;
+
 We notice an interaction term in our model. This term allows the effect of a unit change in $median\:home\:value$ to depend on $arrest\:rate$. The coefficient of this interaction term measures the effect on clearance status of an additional dollar of median home value is greater, by the amount $\beta_5$, for each additional percentage point increase in arrest rate.
+
+By including the interaction term, the model performance is enhanced. RMSE declined from 2.0318 to 2.0254. Other models will be considered in the following sections with the goal of reducing RMSE further.
 
 ```{r Stepwise, message=FALSE, warning=FALSE, echo=FALSE}
 set.seed(2)
@@ -210,16 +212,11 @@ colnames(validate_RMSE_step) <- "RMSE"
 rownames(validate_RMSE_step) <- "Stepwise Selection" 
 kable(validate_RMSE_step)
 ```
-
-In terms of the types of models, we started with a baseline logistic regression model, with the specification of clearance_status on everything else. After that, using the stepwise variable selection function, we computed the best set of variables and the interaction between them which performed the best. The logistic model chose by the stepwise function is 
-
-`clearance_status ~ population_density + median_income + median_home_value + 
-    prop_white + arrest_rate + zipcode + median_home_value:arrest_rate + 
-    median_income:arrest_rate + median_home_value:zipcode + median_income:prop_white + 
-    prop_white:arrest_rate + arrest_rate:zipcode + population_density:prop_white + 
-    population_density:median_home_value + population_density:arrest_rate`
     
 ## Third Model: Random Forest 
+The next model performed is random forest. The process involves resampling the data with replacement 500 times and fitting a tree to each one. Then, averaging the predictions of the 500 different trees. However, we can reduce covariance between each tree by using only a subset of the variables. Thus, the 500 trees are diversified and their predictions are less correlated. By introducing more randomness to the process, we can improve both accuracy and prevent over-fitting. The resulting RMSE is 0.3522 which is a significant improvement from the logistic model or stepwise selection.
+
+Figure [figure number here] presents a variable importance plot. It shows that excluding zip code would increase mean square error (MSE) by 26 percent, suggesting that zip code should be included in the model. The process of the calculation involves comparing out-of-bag performance of the model when using the correct zip code versus permuting the zip code for all observations.
 ```{r Random Forest, message=FALSE, warning=FALSE, echo=FALSE}
 set.seed(3)
 rmse_frame_forest=foreach(x=1:10, .combine='rbind')%do%{
@@ -234,7 +231,7 @@ crime_forest <- randomForest(clearance_status ~ population_density + median_inco
 modelr::rmse(crime_forest,omit_test)
 } %>% as.data.frame
 # validate_RMSE_forest = mean(rmse_frame_forest$V1) 
-## Validated RMSEout of .353
+## Validated RMSEout of .3522
 
 validate_RMSE_forest <- data.frame(mean(rmse_frame_forest$V1))
 colnames(validate_RMSE_forest) <- "RMSE"
@@ -242,8 +239,6 @@ rownames(validate_RMSE_forest) <- "Random Forest"
 kable(validate_RMSE_forest)
 ```
 
-We repeated the process for gradient boosted models. We used Gradient Boosting models with distribution as "gaussian", the number of trees 
-as 10000, shrinkage as 0.01,and with a interaction depth of 4.
 
 ## Fourth Model: Gradient Boosting
 ```{r Gradient Boosting, message=FALSE, warning=FALSE, echo=FALSE}
@@ -321,13 +316,14 @@ kable(validate_RMSE_lasso)
 
 ## Confusion Matrix for the best model...
 ```{r Validation_GBM, message=FALSE, warning=FALSE, echo=FALSE}
+pred <- predict(crime_gbm,newdata=crime_test)
+confusion_table <- data.frame(fold_id=integer(),
+                              TPR=integer(),
+                              FPR=integer())
 
-pred =predict(crime_gbm,newdata=crime_test)
-confusion_table = data.frame(fold_id=integer(),TPR=integer(),FPR=integer())
+level <- seq(.05,.5,by=.05)
 
-level = seq(.05,.5,by=.05)
-
-confusion_level=foreach(x=level)%do%{
+confusion_level <- foreach(x=level)%do%{
 yhat_test = ifelse(pred > x,1,0)
 confusion_out = table(y=crime_test$clearance_status, yhat = yhat_test)
 TPR = (confusion_out[2,2]/(confusion_out[2,1]+confusion_out[2,2]))
