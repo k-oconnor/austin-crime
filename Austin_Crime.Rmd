@@ -32,7 +32,20 @@ library(kableExtra)
 library(pROC)
 ```
 
-# Data Visualization
+# Abstract
+The purpose of this report is to predict whether or not a crime is cleared by arrest, based on various demographic factors across Austin, TX. To build our analysis, we utilize data from the Austin Police Department and the U.S. Census Bureau, which includes information on reported crimes and demographics by zip code. We employ logistic regression, stepwise regression, random forest, gradient-boosted tree models, and lasso to predict crime clearance status. From these models, we select the gradient-boosted tree model as our best model with a predictive accuracy greater than 85 percent when validated against testing data. 
+
+# Introduction
+Whether in a large city or a small town, crime is an unforunate, yet ever-present, fact of society. While crime may be a constant reality, unique social and demographic factors create asymmetry in the way crime is both committed and penalized in a given city. Such is the case for Austin, TX. As a large metropolitan area covering several zip codes, each area of Austin has a unique composition of various social and demographic factors, which ultimately influence the way crime is penalized across Austin. While the type of crime committed has a clear impact on the resulting repercussions, the location in which crime is committed also seems to influence criminal consequences.  It begs the question of how much our social environment may skew legal decisions that should, ideally, be objective and just.
+
+The motivation of this study is to build a model that accurately predicts the outcome of a criminal offense, based on the demographic factors of a crime's location.  This type of predictive analysis can be difficult, as no criminal offense is the same as another. Two crimes may both be classified as "theft", but one offense may have more clear evidence of the crime than the other. Therefore, the consequences may vary based on the specific details of each case. Some cases reside in a more "gray area" of what the just consequence should be. It is these cases that may be more susceptible to bias based on the demographics of their environment, such as income and race. Without the granular detail of each criminal offense, it can be hard to predict when these external factors truly have an effect. 
+
+However, as more data regarding criminal action becomes publicly available, it is increasingly important that we build predictive models to understand the true magnitude of these external factors' influence on legal decisions. This paper is organized as follows. In Section 2, we describe the data used for our analysis and provide some initial visualizations. In Section 3, we present our statistical models, namely: Logistic, Stepwise Selection, Random Forest, Gradient Boosting, and Lasso. In Section 4 , we compare the performance of our models using confusion matrices and select the best performing model. Finally, we summarize our results and conclusions in Section 5.
+
+
+
+
+# Data 
 ## Feature Engineering and Data Loading
 ```{r Data Cleaning, message=FALSE, warning=FALSE, echo=FALSE}
 obs <- read_csv("austin_crime.csv")
@@ -68,13 +81,9 @@ tx <- geojson_read("tx_zip_geo.json", what = "sp")
 ## Resulting in 27459 observations remaining
 table <- merge(obs, zip, by = "zipcode") %>% drop_na()
 table$zipcode = as.factor(table$zipcode)
-
-## We want to set some data aside for validation at the end.. so we conduct a split..
-
-
 ```
 
-# Data Visualization
+# Data
 ## Subsetting geojson
 ```{r Data Cleaning2, message=FALSE, warning=FALSE, echo=FALSE}
 # Subsetting our geojson such that only the zipcodes of interest are included...
@@ -88,32 +97,10 @@ tx_sub <- na.omit(tx_sub)
 
 ```
 
-# Data Visualization
-## Visualizing
-```{r Data Cleaning3, message=FALSE, warning=FALSE, echo=FALSE}
-options(scipen = 10000)
+The GeoJSON we found has the boundaries of every zipcode in Texas. We subset this JSON based on the zipcodes included in our dataset.
 
-ggplot() + geom_polygon(data = tx_sub, aes(fill = median_income, x = long, y = lat, group = group,), color = 'black') + ggtitle("Median Income in Austin Area Zipcodes (USD)")
-
-ggplot() + geom_polygon(data = tx_sub, aes(fill = median_home_value, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Median Home Value in Austin Area Zipcodes (USD)")
-
-ggplot() + geom_polygon(data = tx_sub, aes(fill = prop_white, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Proportion of Population that is White in Austin Zipcodes")
-
-ggplot() + geom_polygon(data = tx_sub, aes(fill = arrest_rate, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Normalized Proportion of Police Reports Leading to Arrest in Austin Zipcodes")
-```
-
-# Question: Does Race play a part in the prevailing arrest rate?
-## Some Visualizations...
-```{r Ethnicity Effects, message=FALSE, warning=FALSE, echo=FALSE}
-
-
-ggplot(data = zip) + geom_point(aes(x=prop_white, y=arrest_rate, color = population_density)) +theme_linedraw()+ ggtitle("Proportion of Residents Who are White vs. Normalized Arrest Rate")
-ggplot(data=zip) + geom_point(aes(x=prop_white, y=median_home_value))+theme_linedraw()+ ggtitle("Proportion of Residents Who are White vs. Median Home Value")
-ggplot(data=zip) + geom_point(aes(x=population_density, y=arrest_rate))+theme_linedraw()+ ggtitle("Normalized Arrest Rate vs ZipCode Population Density(People/Sq Mile)")
-
-
-```
-
+# Data
+## Summary and Description
 ```{r data_description, message=FALSE, warning=FALSE, echo=FALSE}
 table <- merge(obs, zip, by = "zipcode") %>% drop_na()
 
@@ -125,12 +112,58 @@ Type <- c("numeric" , "numeric", "numeric", "numeric", "numeric", "numeric", "nu
 
 vars_of_interest <- data.frame(Variable, Description, Type)
 
-kable(vars_of_interest, caption = "Data Dictionary")
+kable(vars_of_interest, caption = "Figure (1) Data Dictionary")
 
 ```
 
+The data used in this analysis is from the Austin Police Department Crime Reports Data. This dataset only includes incidents during 2014-2015 that the Austin Police Department responded to and wrote a report. One incident could have several offenses associated with it, however, only the highest offense is recorded in the dataset. The dataset includes information about the exact location, zipcode, time, and particular offense for each incident. Additionally, this dataset includes information about the clearance status for each recorded offense. The clearance status defines how or whether a crime was solved using three categories: Not cleared, Cleared by Exception, and Cleared by Arrest. For our study, the 'Cleared by Arrest' category is our chosen clearance status of interest. Therefore, we re-coded clearance status as a binary indicator, where Cleared by Arrest is equal to one, and zero otherwise. Additionally, we re-coded zipcode as a factor in order to include each zipcode in our models while also maintaining interpretability. 
 
-# Models
+In addition to the Austin Police Department data, we used U.S. Census Bureau data to collect demographic information for each zipcode in the crime report dataset. Specifically, we gathered information about the population density, median income, median home value, arrest rate, and racial composition for each zipcode. 
+
+As an additional feature of interest, we create "arrest rate" as a new feature in the dataset. Arrest rate is the proportion of crimes cleared by arrest relative to the total number of crimes in each zip code.  This helps us understand which areas in Austin tend to be high arrest areas, therefore adding predictive power to the likelihood a crime is cleared by arrest based on its zip code. Also, as this feature is relatively flat, we decided to z-score the arrest rate, so we can more easily understand relative differences between different areas.
+
+As a final step to create a data set for modeling,  we include latitude and longitude boundaries for each zip code of interest. This allows us to visualize group trends in Austin by each zip code, and understand the asymmetry of demographic factors in the Austin metropolitan. Figure 2 and Figure 3 show median income by zip code and median home value by zip code, respectively. We can clearly see a correlation between income and home value, with most high income and high valued homes on the west side of Austin. 
+
+
+
+# Data
+## Visualizing Zipcodes
+```{r Data Cleaning3, message=FALSE, warning=FALSE, echo=FALSE}
+options(scipen = 10000)
+
+ggplot() + geom_polygon(data = tx_sub, aes(fill = median_income, x = long, y = lat, group = group,), color = 'black') + ggtitle("Median Income in Austin Area Zipcodes (USD)") + labs(caption = "Figure (2)")
+
+ggplot() + geom_polygon(data = tx_sub, aes(fill = median_home_value, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Median Home Value in Austin Area Zipcodes (USD)") + labs(caption = "Figure (3)")
+
+ggplot() + geom_polygon(data = tx_sub, aes(fill = prop_white, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Proportion of Population that is White in Austin Zipcodes") + labs(caption = "Figure (4)")
+
+ggplot() + geom_polygon(data = tx_sub, aes(fill = arrest_rate, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Normalized Proportion of Police Reports Leading to Arrest in Austin Zipcodes") + labs(caption = "Figure (5)")
+
+```
+
+Figure 4 shows the proportion of the population that is white by zip code. This plot shows a clear trend of a more white population on the west side of Austin, and a more minority population on the east side. When comparing this to Figure 2 and Figure 3, we can see that the west side of Austin is wealthier and more white, while the east side is less wealthy and less white. Do these trends correlate with arrest rates? 
+
+Figure 5 shows the average arrest rate by zip code. There does not appear to be a clear trend of certain areas with high or low arrest rates. However, one northwest zip code experiences a notably high arrest rate. This particular area of Austin is relatively more white, but of lower income status. However, this area has an extremely low population density, and only a few observations of crimes, so we have to understand that lower density areas with fewer observations may skew results in our analysis. When ignoring outliers, it would appear that median income may be one of the more important factors in determining the arrest rate. One might conclude that community law enforcement budgets are shaped by the prevailing wealth and taxes collected in those areas. 
+
+
+
+
+# Question: Does Race play a part in the prevailing arrest rate?
+## A visualization
+```{r Ethnicity Effects, message=FALSE, warning=FALSE, echo=FALSE}
+
+ggplot(data = zip) + geom_point(aes(x=prop_white, y=arrest_rate, color = population_density)) +theme_linedraw()+ ggtitle("Proportion of Residents Who are White vs. Normalized Arrest Rate")+ labs(caption = "Figure (6)")
+
+```
+
+Of high interest in today's political landscape is the implications of ethnicity in justice outcomes. What relationships does ethnicity have in the prevailing arrest rate in a community? If you are white, is your police report more likely to lead to an arrest? Figure 6, shows that, at least in Austin, there does not appear to be a clear trend. To understand whether or not there are outliers skewing results, the figure also accounts for population density, measured in people per square mile. We notice that there are several outliers in low density areas. There appears to be no readily obvious trend.However, we will run some models to see if such an assumption can be justified statistically.
+
+
+
+# Methods
+## Summary
+To attempt to predict the outcome of 'clearance_status', we will run a model horse race, and select the model that returns the lowest validated RMSEout. To validate each model, we will calculate the RMSEout for a train/test split 10 times, and take the average from the ten samples to provide a more robust estimate for comparison.
+
 ## First Model: Logistic Regression
 We started modeling by recoding dependent variable `clearance_status` to take on the unit value if crime is cleared by arrest and zero otherwise. Also, we dropped all nulls before creating a train/test split with 80 percent of the data going to the training set, while the remaining 20 percent ending up in the testing set data. In our analysis, we chose to include population density, median income, median home price, white population share, and arrest rate as independent variables. The resulting model is 
 \
@@ -169,9 +202,7 @@ modelr::rmse(crime_logit,crime_test)
 ## Validated RMSEout of 2.0318
 
 validate_RMSE_logit <- data.frame(mean(rmse_frame_logit$V1))
-colnames(validate_RMSE_logit) <- "RMSE"
-rownames(validate_RMSE_logit) <- "Logit" 
-kable(validate_RMSE_logit)
+# 2.03
 ```
 
 ## Second Model: Stepwise Selection
@@ -208,15 +239,14 @@ modelr::rmse(crime_step,crime_test)
 ## Validated RMSEout of 2.0254
 
 validate_RMSE_step <- data.frame(mean(rmse_frame_step$V1))
-colnames(validate_RMSE_step) <- "RMSE"
-rownames(validate_RMSE_step) <- "Stepwise Selection" 
-kable(validate_RMSE_step)
+## 2.04
 ```
     
 ## Third Model: Random Forest 
 The next model performed is random forest. The highlight of tree is that it automatically detect nonlinearities and interactions. So there is no need to include interaction terms. The process involves resampling the data with replacement 500 times and fitting a tree to each one. Then, averaging the predictions of the 500 different trees. However, we can reduce covariance between each tree by using only a subset of the variables. Thus, the 500 trees are diversified and their predictions are less correlated. By introducing more randomness to the process, we can improve both accuracy and prevent over-fitting. The resulting RMSE is 0.3522 which is a significant improvement from the logistic model or stepwise selection.
 
 Figure [figure number here] presents a variable importance plot. It shows that excluding zip code would increase mean square error (MSE) by 26 percent, suggesting that zip code should be included in the model. The process of the calculation involves comparing out-of-bag performance of the model when using the correct zip code versus permuting the zip code for all observations.
+
 ```{r Random Forest, message=FALSE, warning=FALSE, echo=FALSE}
 set.seed(3)
 rmse_frame_forest=foreach(x=1:10, .combine='rbind')%do%{
@@ -283,16 +313,8 @@ grid <- 10^seq(10, -2, length = 100)
 lasso.mod <- glmnet(x, y, alpha = 1, lambda = grid, family = "binomial")
 cv.out <- cv.glmnet(x, y, alpha = 1, family = "binomial", folds=20)
 bestlam <- cv.out$lambda.min
-
-plot(lasso.mod)
-title("Figure 1: Lasso Coefficients as a Function of L1 Norm", line = 3)
-
 ```
 
-```{r Lasso2, warning=FALSE, echo=FALSE}
-plot(cv.out)
-title("Figure 2: Mean-Squared Error as a Function of log Lambda", line = 3)
-```
 
 ```{r Lasso3, warning=FALSE, echo=FALSE}
 table <- merge(obs, zip, by = "zipcode") %>% drop_na()
@@ -310,22 +332,17 @@ kable(LassoCoef, col.names = c("Predictor", "Estimate"), caption = "**Table 1 La
 mse = min(cv.out$cvm)
 rmse = sqrt(mse)
 # .9062
-validate_RMSE_lasso <- data.frame(sqrt(mse))
-colnames(validate_RMSE_lasso) <- "RMSE"
-rownames(validate_RMSE_lasso) <- "Lasso" 
-kable(validate_RMSE_lasso)
-
 ```
 
 
-## Confusion Matrix for the best model...
+## ROC Curve for best model by RMSEout
 ```{r Validation_GBM, message=FALSE, warning=FALSE, echo=FALSE}
-pred <- predict(crime_gbm,newdata=crime_test)
+pred <- predict(crime_gbm,newdata=crime_test, type = 'response')
 confusion_table <- data.frame(fold_id=integer(),
                               TPR=integer(),
                               FPR=integer())
 
-level <- seq(.05,.5,by=.05)
+level <- seq(.1,.5,by=.05)
 
 confusion_level <- foreach(x=level)%do%{
 yhat_test = ifelse(pred > x,1,0)
@@ -338,11 +355,11 @@ confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
 gbm_accuracy = (6014+51)/(6014+1023+32+51) # 85.2% accuracy
 
 confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for GBM Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
-accurac7120
+
 gbm_auc = auc(crime_test$clearance_status,pred)
 ## .669
 ```
-## Confusion Matrix for the second best model...
+## ROC Curve for the second best model by RMSEout
 ```{r Validation_RF, message=FALSE, warning=FALSE, echo=FALSE}
 
 pred =predict(crime_forest,newdata=crime_test)
@@ -363,8 +380,14 @@ confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y=
 
 
 forest_auc = auc(crime_test$clearance_status,pred)
-## .667
+## .672
 
+```
+
+```{r Variable Importance, message=FALSE, warning=FALSE, echo=FALSE}
+## Variable Importance Plots
+
+vi = varImpPlot(crime_forest, type=1)
 ```
 
 ## Sanity-Check: Confusion Matrix for the logit model...
@@ -384,25 +407,10 @@ confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
 }
 
 
-confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for Random Forest Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
+confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for Logit Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
 
 
 logit_auc = auc(crime_test$clearance_status,pred)
-## .661
-
-```
-
-
-
-```{r Variable Importance, message=FALSE, warning=FALSE, echo=FALSE}
-## Variable Importance Plots
-
-vi = varImpPlot(crime_forest, type=1)
-
-omit_test = as.data.frame(table)
-partialPlot(crime_forest, table, 'prop_white')
-partialPlot(crime_forest, table, 'median_home_value')
-partialPlot(crime_forest, table, 'median_income')
-partialPlot(crime_forest, table, 'population_density')
+## .655
 
 ```
