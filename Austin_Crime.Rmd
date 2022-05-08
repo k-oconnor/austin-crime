@@ -2,7 +2,7 @@
 title: "Austin_Crime"
 author: "Kevin, Elle, Abigail"
 date: "5/4/2022"
-output: md_document
+output: pdf_document
 always_allow_html: true
 ---
 
@@ -33,7 +33,8 @@ library(pROC)
 ```
 
 # Abstract
-The purpose of this report is to predict whether or not a crime is cleared by arrest, based on various demographic factors across Austin, TX. To build our analysis, we utilize data from the Austin Police Department and the U.S. Census Bureau, which includes information on reported crimes and demographics by zip code. We employ logistic regression, stepwise regression, random forest, gradient-boosted tree models, and lasso to predict crime clearance status. From these models, we select the gradient-boosted tree model as our best model with a predictive accuracy greater than 85 percent when validated against testing data. 
+The purpose of this report is to predict whether or not a crime is cleared by arrest, based on various demographic factors across Austin, TX. To build our analysis, we utilize data from the Austin Police Department and the U.S. Census Bureau, which includes information on reported crimes and demographics by zip code. We employ logistic regression, stepwise regression, random forest, gradient-boosted tree models, and lasso to predict crime clearance status. From these models, we select the random forest model as our best model with an AUC of 0.672 when validated against testing data. 
+
 
 # Introduction
 Whether in a large city or a small town, crime is an unforunate, yet ever-present, fact of society. While crime may be a constant reality, unique social and demographic factors create asymmetry in the way crime is both committed and penalized in a given city. Such is the case for Austin, TX. As a large metropolitan area covering several zip codes, each area of Austin has a unique composition of various social and demographic factors, which ultimately influence the way crime is penalized across Austin. While the type of crime committed has a clear impact on the resulting repercussions, the location in which crime is committed also seems to influence criminal consequences.  It begs the question of how much our social environment may skew legal decisions that should, ideally, be objective and just.
@@ -324,7 +325,7 @@ vars_of_interest <- data.frame(Model, RMSEout)
 kable(vars_of_interest, caption = "Table (2) Modeling Results")
 ```
 
-Of the five models we tried to run, the random forest model outperformed all others, with a validated RMSEout of .352
+Of the five models we tried to run, the random forest model outperformed all others, with a validated RMSEout of .352. From here, we will make predictions against the testing dataset, generate a ROC curve, and calculate AUC.
 
 
 ## ROC Curve for best model by RMSEout
@@ -344,7 +345,7 @@ confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
 }
 
 
-confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for Random Forest Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
+confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for Random Forest Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)+ labs(caption = "Figure (7)")
 
 
 forest_auc = auc(crime_test$clearance_status,pred)
@@ -352,20 +353,21 @@ forest_auc = auc(crime_test$clearance_status,pred)
 
 ```
 
+As we see in figure 7, the RF model outperforms a 50/50 guess. When calculating AUC, we return .672. To make a comparison, does Random Forest outperform a more general model? When comparing to the results of the more simple logit model, we see that the random forest has 2.5% more AUC. (See appendix), and hence, as more predictive power. When we graph variable importance, we observe that the prevailing arrest rate in each zipcode is most important in regards to percent increase in MSE if omitted, followed by population density, and median income. Clearly, jurisdictional effects are of the greatest predictive power. We do observe a small effect of ethnicity, which could potentially be explained by systemic biases, but the effect is marginal in comparison, and we cannot state such with any meaningful degree of confidence. Population density also plays a significant part. One might infer that in higher density areas, there is a greater police presence.
 
-```{r Variable Importance, message=FALSE, warning=FALSE, echo=FALSE}
-## Variable Importance Plots
+# Conclusion
+After comparing five different methods, we select the best predictive model with an AUC measure of 0.672. This means our best model only correctly predicts about 67% of crime clearance statuses. While our rate of accurate prediction is better than a random guess, it still leaves a large margin for improvement. Our model uses demographic information at the aggregate level to predict crime clearance outcomes at the individual level. Therefore, our predictive power may be limited by our lack demographic information for each individual in the police report data set. Using data with both crime report and demographic information at the individual level, may improve the predictive performance of future studies. Moreover, future studies may want to include more features focused on income and economic factors, as these features seem to carry important predictive power for crime clearance status. With a more comprehensive data set and additional economic features, future studies likely will see improved model performance. 
 
-vi = varImpPlot(crime_forest, type=1)
-```
 
-## Sanity-Check: Confusion Matrix for the logit model...
+
+# Appendix
+## Sanity-Check: ROC Curve for the logit model
 ```{r Sanity-Check - Logit Performance, message=FALSE, warning=FALSE, echo=FALSE}
 
 pred = predict(crime_logit, crime_test, type='response')
 confusion_table = data.frame(fold_id=integer(),TPR=integer(),FPR=integer())
 
-level = seq(.1,.5,by=.05)
+level = seq(.1,.6,by=.05)
 
 confusion_level=foreach(x=level)%do%{
 yhat_test = ifelse(pred > x,1,0)
@@ -376,10 +378,18 @@ confusion_table[nrow(confusion_table)+1,] = c(x,TPR,FPR)
 }
 
 
-confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for Logit Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)
+confusion_table %>% ggplot(aes(FPR,TPR)) + geom_line(fill="steelblue") + labs(y= "True Positive Rate", x="False Positive Rate", title = "ROC Curve for Logit Model")+theme_linedraw() + geom_abline(slope=1,intercept = 0)+ labs(caption = "Figure (7)")
+
 
 
 logit_auc = auc(crime_test$clearance_status,pred)
 ## .655
 
+```
+# Appendix
+## Sanity-Check: Variable Importance Plot for RF model
+```{r Variable Importance, message=FALSE, warning=FALSE, echo=FALSE}
+## Variable Importance Plots
+
+vi = varImpPlot(crime_forest, type=1)
 ```
