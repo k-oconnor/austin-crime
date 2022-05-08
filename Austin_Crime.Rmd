@@ -172,7 +172,9 @@ We started with a baseline logistic regression mode, with the specification of c
 &nbsp;
 The t statistics reveal that `arrest rate`, `median home price`, and `white population share` are highly significant in predicting `clearance_status`, so they should be included in the model to help with prediction. Then, out of sample root mean square error (RMSE) is calculated as a measure of the model’s out of sample performance. RMSE will be used to compare across all models, and the lower, the better.
 
-Each coefficient shows a ceteris paribus effect of every feature on clearance status. For instance, $\beta_{prop_white}=-0.67$ is statistically significant at 1 percent. The interpretation is that as the share of the white population increases by 1 percent, the probability of crime being cleared by arrest declines by 67 percentage points, holding all other features constant. 
+Each coefficient shows a ceteris paribus effect of every feature on clearance status. For instance, $\beta_{prop_white}=-0.67$ is statistically significant at 1 percent. The interpretation is that as the share of the white population increases by 1 percent, the probability of crime being cleared by arrest declines by 67 percentage points, holding all other features constant. This means that white populations are less likely to be arrested for committing a crime, versus their non-white counterparts. However, whether or not this implies discrimination would require further analysis and addition of more variables. 
+
+We also found a positive association between median income and probability of crime being cleared by arrest as expected although the estimate is not significant. When the citizens become wealthier, we expect a reduction in crime and thus the probability of being arrested declines as well. Another interesting fact we noticed is that the probability of being arrested tends to increase with population density. As the city becomes more populated, the likelihood of getting caught is higher which could be the result of the city increasing police spending and so criminals are caught.
 
 ```{r Logistic, message=FALSE, warning=FALSE, echo=FALSE}
 set.seed(1)
