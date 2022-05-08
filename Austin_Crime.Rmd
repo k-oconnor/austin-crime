@@ -100,7 +100,6 @@ tx_sub <- na.omit(tx_sub)
 
 The GeoJSON we found has the boundaries of every zipcode in Texas. We subset this JSON based on the zipcodes included in our dataset.
 
-# Data
 ## Summary and Description
 ```{r data_description, message=FALSE, warning=FALSE, echo=FALSE}
 table <- merge(obs, zip, by = "zipcode") %>% drop_na()
@@ -125,9 +124,6 @@ As an additional feature of interest, we create "arrest rate" as a new feature i
 
 As a final step to create a data set for modeling,  we include latitude and longitude boundaries for each zip code of interest. This allows us to visualize group trends in Austin by each zip code, and understand the asymmetry of demographic factors in the Austin metropolitan. Figure 2 and Figure 3 show median income by zip code and median home value by zip code, respectively. We can clearly see a correlation between income and home value, with most high income and high valued homes on the west side of Austin. 
 
-
-
-# Data
 ## Visualizing Zipcodes
 ```{r Data Cleaning3, message=FALSE, warning=FALSE, echo=FALSE}
 options(scipen = 10000)
@@ -386,7 +382,7 @@ logit_auc = auc(crime_test$clearance_status,pred)
 ## .655
 
 ```
-# Appendix
+
 ##Variable Importance Plot for RF model
 
 ```{r Variable Importance, message=FALSE, warning=FALSE, echo=FALSE}
