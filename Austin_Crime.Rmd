@@ -271,7 +271,7 @@ Figure 7 presents a variable importance plot which can be used to rank the impor
 ## Fourth Model: Gradient Boosting
 Similarly to the random forest model in the previous section, boosting combines many decision trees where each tree is fitted to the residual of the previous tree. However, the fit in each round will be scaled down to constrain it from explaining the full variation in the data. The resulting estimate is the sum of all crushed trees in each round. The highlight of the gradient boosting technique is that it keeps each tree in the ensemble from overfitting just like when random forest restricts the number of features to prevent overfitting.
 
-Boosting requires choosing three main hyper parameters: (1) Number of trees: 500, (2) Shrinkage Parameter: 0.01, and (3) Interaction Depth: 4
+Boosting requires choosing three main hyper parameters: (1) Number of trees: 500, (2) Shrinkage Parameter: 0.01, and (3) Interaction Depth: 4. Table 2 shows the relative influence of each feature used in boosting. The top two most important variables in boosting are arrest rate and population density which conform with the variable importance plot in the random forest model.
 
 ```{r Gradient Boosting, message=FALSE, warning=FALSE, echo=FALSE}
 set.seed(4)
@@ -286,6 +286,14 @@ crime_gbm <- gbm(clearance_status ~ population_density + median_income + median_
                  distribution = "bernoulli",
                  n.trees = 500,
                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 2)
+
+crime_gbm_p <- predict(crime_gbm,
+                       newdata = crime_test,
+                       type="response",
+                       n.trees = 500)
+
+RelativeInfluence <- as.data.table(summary(crime_gbm))
+gbm_tab <- kable(RelativeInfluence, caption = "Table 2:  Variable Relative Influence in Boosting")
 
 modelr::rmse(crime_gbm,omit_test)
 } %>% as.data.frame
