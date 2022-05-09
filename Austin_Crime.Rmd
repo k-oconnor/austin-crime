@@ -46,9 +46,8 @@ The motivation of this study is to build a model that accurately predicts the ou
 
 However, as more data regarding criminal action becomes publicly available, it is increasingly important that we build predictive models to understand the true magnitude of these external factors’ influence on legal decisions. This paper is organized as follows. In Section 2, we describe the data used for our analysis and provide some initial visualizations. In Section 3, we present our statistical models, namely: Logistic, Stepwise Selection, Random Forest, Gradient Boosting, and Lasso. In Section 4 , we compare the performance of our models using confusion matrices and select the best performing model. Finally, we summarize our results and conclusions in Section 5.  
 
-# Data 
-## Feature Engineering and Data Loading
-```{r Data Cleaning, echo=TRUE, message=FALSE, warning=FALSE}
+
+```{r Data Loading and Features, message=FALSE, warning=FALSE, include=FALSE}
 obs <- read_csv("austin_crime.csv")
 
 # Encode the crime target variable of interest
@@ -130,7 +129,6 @@ options(scipen = 10000)
 
 ggplot() + geom_polygon(data = tx_sub, aes(fill = median_income, x = long, y = lat, group = group,), color = 'black') + ggtitle("Median Income in Austin Area Zipcodes (USD)") + labs(caption = "Figure (2)")
 
-ggplot() + geom_polygon(data = tx_sub, aes(fill = median_home_value, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Median Home Value in Austin Area Zipcodes (USD)") + labs(caption = "Figure (3)")
 
 ggplot() + geom_polygon(data = tx_sub, aes(fill = prop_white, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Proportion of Population that is White in Austin Zipcodes") + labs(caption = "Figure (4)")
 
@@ -166,7 +164,10 @@ We started with a baseline logistic regression mode, with the specification of c
 \
 &nbsp;
   $$
-  P(clearance \: status = 1 \mid x_{i,t}) = \beta_0 + \beta_1 population \: density_{i,t} + \beta_2 median \: income_{i,t} + \beta_3 median \: home \: value_{i,t} + \beta_3 prop \: white_{i,t} + \beta_4 arrest \: rate _{i,t}
+  P(clearance \: status = 1 \mid x_{i,t}) = \
+  $$
+  $$
+  beta_0 + \beta_1 population \: density_{i,t} + \beta_2 median \: income_{i,t} + \beta_3 median \: home \: value_{i,t} + \beta_3 prop \: white_{i,t} + \beta_4 arrest \: rate _{i,t}
   $$
 \
 &nbsp;
@@ -209,14 +210,20 @@ Although the logistic model is simple and easy to implement, it fails to capture
 \
 &nbsp;
     $$
-  P(clearance \: status = 1 \mid x_{i,t}) = \beta_0 + \beta_1 population \: density_{i,t} + \beta_2 median \: income_{i,t} + \beta_3 median \: home \: value_{i,t} + \beta_3 prop \: white_{i,t} + \beta_4 arrest \: rate_{i,t} + \beta_5 median\:home\:value \times arrest\:rate
+  P(clearance \: status = 1 \mid x_{i,t}) = \
+  $$
+  $$
+  beta_0 + \beta_1 population \: density_{i,t} + \beta_2 median \: income_{i,t} + \beta_3 median \: home \: value_{i,t} + \beta_3 prop \: white_{i,t} + \beta_4 arrest \: rate_{i,t} + 
+  $$
+  $$
+  \beta_5 median\:home\:value \times arrest\:rate
   $$
 \
 &nbsp;
 
 We notice an interaction term in our model. This term allows the effect of a unit change in $median\:home\:value$ to depend on $arrest\:rate$. The coefficient of this interaction term measures the effect on clearance status of an additional dollar of median home value is greater, by the amount $\beta_5$, for each additional percentage point increase in arrest rate. Simply put, there is a joint effect between median home value and arrest rate. By including the interaction term, the model performance is enhanced. RMSE declined from 2.0318 to 2.0254. Although the improvement is minor, other models will be considered in the following sections with the goal of reducing RMSE further.
 
-```{r Stepwise, message=FALSE, warning=FALSE, echo=FALSE}
+```{r Stepwise, message=FALSE, warning=FALSE, include=FALSE}
 set.seed(2)
 crime_step <- step(crime_logit, scope=~(.)^2)
 # stepwise function chose the following model
@@ -292,13 +299,14 @@ crime_gbm_p <- predict(crime_gbm,
                        type="response",
                        n.trees = 500)
 
-RelativeInfluence <- as.data.table(summary(crime_gbm))
-gbm_tab <- kable(RelativeInfluence, caption = "Table 2:  Variable Relative Influence in Boosting")
 
 modelr::rmse(crime_gbm,omit_test)
 } %>% as.data.frame
 validate_RMSE_gbm = mean(rmse_frame_gbm$V1) 
 ## RMSEout of 1.984
+
+RelativeInfluence <- as.data.table(summary(crime_gbm))
+gbm_tab <- kable(RelativeInfluence, caption = "Table 2:  Variable Relative Influence in Boosting")
 
 ```
 
@@ -306,6 +314,7 @@ validate_RMSE_gbm = mean(rmse_frame_gbm$V1)
 The last statistical model used in the prediction of probability of clearance by arrest is lasso. The highlight of this model is that it utilizes shrinkage. Why would shrinkage help with prediction? – Although that part where it shrinks the coefficients does not make them more accurate estimates of the coefficients, it helps make out of sample prediction better and prevent overfitting. We started off standardizing all variables first before running the model. The resulting RMSE is 0.9011662. However, we decided to add an interaction term between median home value and arrest rate as suggested by stepwise selection. The new RMSE is 0.9010818 which is a minor improvement.
 
 In addition to keeping us from overfitting, another major advantage of lasso is that it also helps with feature selection by penalizing nonzero $\beta$ since it increases variance. Applying lasso to our model with an interaction term results in 4 nonzero estimates, implying these 4 variables have the highest predictive power.
+
 ```{r Lasso, message=FALSE, warning=FALSE, echo=FALSE}
 set.seed(5)
 x <- model.matrix(clearance_status ~ population_density + median_income + median_home_value + prop_white + arrest_rate + as.factor(zipcode) + median_home_value:arrest_rate,
@@ -320,8 +329,6 @@ cv.out <- cv.glmnet(x, y, alpha = 1, family = "binomial", folds=20)
 bestlam <- cv.out$lambda.min
 
 lasso.min <- coef(cv.out, select="min")
-sum(lasso.min!=0)
-
 mse = min(cv.out$cvm)
 rmse = sqrt(mse)
 # .9010
@@ -340,6 +347,7 @@ vars_of_interest <- data.frame(Model, RMSEout)
 
 kable(vars_of_interest, caption = "Table (2) Modeling Results")
 ```
+
 
 Of the five models we tried to run, the random forest model outperformed all others, with a validated RMSEout of .352. From here, we will make predictions against the testing dataset, generate a ROC curve, and calculate AUC.
 
@@ -377,6 +385,14 @@ After comparing five different methods, we select the best predictive model with
 
 
 # Appendix
+
+## Figure 3
+```{r Figure 3- Logit Performance, message=FALSE, warning=FALSE, echo=FALSE}
+ggplot() + geom_polygon(data = tx_sub, aes(fill = median_home_value, x = long, y = lat, group = group,), color = 'black')+ ggtitle("Median Home Value in Austin Area Zipcodes (USD)") + labs(caption = "Figure (3)")
+```
+
+
+
 ## Sanity-Check: ROC Curve for the logit model
 ```{r Sanity-Check - Logit Performance, message=FALSE, warning=FALSE, echo=FALSE}
 
@@ -402,5 +418,6 @@ logit_auc = auc(crime_test$clearance_status,pred)
 ## .655
 
 ```
+
 
 
