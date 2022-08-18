@@ -261,7 +261,7 @@ include population density, median income, median home price, white
 population share, and arrest rate as independent variables. The
 resulting model is  
  
-*P*(*c**l**e**a**r**a**n**c**e* *s**t**a**t**u**s* = 1 ∣ *x*<sub>*i*, *t*</sub>) = *β*<sub>0</sub> + *β*<sub>1</sub>*p**o**p**u**l**a**t**i**o**n* *d**e**n**s**i**t**y*<sub>*i*, *t*</sub> + *β*<sub>2</sub>*m**e**d**i**a**n* *i**n**c**o**m**e*<sub>*i*, *t*</sub> + *β*<sub>3</sub>*m**e**d**i**a**n* *h**o**m**e* *v**a**l**u**e*<sub>*i*, *t*</sub> + *β*<sub>3</sub>*p**r**o**p* *w**h**i**t**e*<sub>*i*, *t*</sub> + *β*<sub>4</sub>*a**r**r**e**s**t* *r**a**t**e*<sub>*i*, *t*</sub>
+*P*(*c**l**e**a**r**a**n**c**e* *s**t**a**t**us* = 1 ∣ *x*<sub>*i*, *t*</sub>) = *β*<sub>0</sub> + *β*<sub>1</sub>*p**o**p**u**l**a**t**i**on* *d**e**n**s**i**t**y*<sub>*i*, *t*</sub> + *β*<sub>2</sub>*m**e**d**i**an* *i**n**c**o**me*<sub>*i*, *t*</sub> + *β*<sub>3</sub>*m**e**d**i**an* *h**o**me* *v**a**l**u**e*<sub>*i*, *t*</sub> + *β*<sub>3</sub>*p**r**op* *w**h**i**t**e*<sub>*i*, *t*</sub> + *β*<sub>4</sub>*a**r**r**e**st* *r**a**te*<sub>*i*, *t*</sub>
   
   The results reveal that `arrest rate`, `median home price`, and
 `white population share` are highly significant in predicting
