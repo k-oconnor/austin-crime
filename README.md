@@ -475,6 +475,7 @@ Lasso
 </tbody>
 </table>
 
+
 ## ROC Curve for best model by RMSEout
 
 ![](Austin_Crime_files/figure-markdown_strict/Validation_GBM-1.png) \#\#
