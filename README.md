@@ -244,6 +244,10 @@ mile. We notice that there are several outliers in low density areas.
 There appears to be no readily obvious trend.However, we will run some
 models to see if such an assumption can be justified statistically.
 
+# Methods
+## Summary
+To attempt to predict the outcome of 'clearance_status', we will run a model horse race, and select the model that returns the lowest validated RMSEout. To validate each model, we will calculate the RMSEout for a train/test split 10 times, and take the average from the ten samples to provide a more robust estimate for comparison. After we select the best model, we will generate ROC curves, and calculate AUC.
+
 # Models
 
 ## First Model: Logistic Regression
@@ -474,6 +478,16 @@ Lasso
 </tr>
 </tbody>
 </table>
+
+# Results
+## Model Performance Summary
+
+Of the five models we tried to run, the random forest model outperformed all others, with a validated RMSEout of .352. From here, we will make predictions against the testing dataset, generate a ROC curve, and calculate AUC.
+
+As we see in figure 8, the RF model outperforms a 50/50 guess. When calculating AUC, we return .672. To make a comparison, does Random Forest outperform a more general model? When comparing to the results of the more simple logit model, we see that the random forest has 2.5% more AUC. (See appendix), and hence, as more predictive power. When we graph variable importance, we observe that the prevailing arrest rate in each zipcode is most important in regards to percent increase in MSE if omitted, followed by population density, and median income. Clearly, jurisdictional effects are of the greatest predictive power. We do observe a small effect of ethnicity, which could potentially be explained by systemic biases, but the effect is marginal in comparison, and we cannot state such with any meaningful degree of confidence. Population density also plays a significant part. One might infer that in higher density areas, there is a greater police presence.
+
+## Conclusion
+After comparing five different methods, we select the best predictive model with an AUC measure of 0.672. This means our best model only correctly predicts about 67% of crime clearance statuses. While our rate of accurate prediction is better than a random guess, it still leaves a large margin for improvement. Our model uses demographic information at the aggregate level to predict crime clearance outcomes at the individual level. Therefore, our predictive power may be limited by our lack demographic information for each individual in the police report data set. Using data with both crime report and demographic information at the individual level, may improve the predictive performance of future studies. Moreover, future studies may want to include more features focused on income and economic factors, as these features seem to carry important predictive power for crime clearance status. With a more comprehensive data set and additional economic features, future studies likely will see improved model performance. 
 
 
 ## ROC Curve for best model by RMSEout
