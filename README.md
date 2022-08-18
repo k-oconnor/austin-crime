@@ -479,7 +479,9 @@ Lasso
 ## ROC Curve for best model by RMSEout
 
 ![](Austin_Crime_files/figure-markdown_strict/Validation_GBM-1.png) \#\#
-ROC Curve for the second best model by RMSEout
+
+## ROC Curve for the second best model by RMSEout
+
 ![](Austin_Crime_files/figure-markdown_strict/Validation_RF-1.png)
 
 ![](Austin_Crime_files/figure-markdown_strict/Variable%20Importance-1.png)
