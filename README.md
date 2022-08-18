@@ -500,6 +500,8 @@ After comparing five different methods, we select the best predictive model with
 
 ![](Austin_Crime_files/figure-markdown_strict/Variable%20Importance-1.png)
 
-## Sanity-Check: Confusion Matrix for the logit model…
+## Sanity-Check: ROC Curve for the baseline logit model…
 
 ![](Austin_Crime_files/figure-markdown_strict/Sanity-Check%20-%20Logit%20Performance-1.png)
+
+As we see, both the best and second best models generate more AUC.
