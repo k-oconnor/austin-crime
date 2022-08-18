@@ -490,11 +490,11 @@ As we see in figure 8, the RF model outperforms a 50/50 guess. When calculating 
 After comparing five different methods, we select the best predictive model with an AUC measure of 0.672. This means our best model only correctly predicts about 67% of crime clearance statuses. While our rate of accurate prediction is better than a random guess, it still leaves a large margin for improvement. Our model uses demographic information at the aggregate level to predict crime clearance outcomes at the individual level. Therefore, our predictive power may be limited by our lack demographic information for each individual in the police report data set. Using data with both crime report and demographic information at the individual level, may improve the predictive performance of future studies. Moreover, future studies may want to include more features focused on income and economic factors, as these features seem to carry important predictive power for crime clearance status. With a more comprehensive data set and additional economic features, future studies likely will see improved model performance. 
 
 
-## ROC Curve for best model by RMSEout
+## ROC Curve for the second best model by RMSEout (Gradient Boosted Machine)
 
 ![](Austin_Crime_files/figure-markdown_strict/Validation_GBM-1.png) \#\#
 
-## ROC Curve for the second best model by RMSEout
+## ROC Curve and Variable Importance Plot for the best model by RMSEout (Random Forest)
 
 ![](Austin_Crime_files/figure-markdown_strict/Validation_RF-1.png)
 
