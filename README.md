@@ -450,6 +450,10 @@ Gradient Boosting
 
 ## Fifth Model: Lasso Model
 
+The last statistical model used in the prediction of probability of clearance by arrest is lasso. The highlight of this model is that it utilizes shrinkage. Why would shrinkage help with prediction? – Although that part where it shrinks the coefficients does not make them more accurate estimates of the coefficients, it helps make out of sample prediction better and prevent overfitting. We started off standardizing all variables first before running the model. The resulting RMSE is 0.9011662. However, we decided to add an interaction term between median home value and arrest rate as suggested by stepwise selection. The new RMSE is 0.9010818 which is a minor improvement.
+
+In addition to keeping us from overfitting, another major advantage of lasso is that it also helps with feature selection by penalizing nonzero $\beta$ since it increases variance. Applying lasso to our model with an interaction term results in 4 nonzero estimates, implying these 4 variables have the highest predictive power.
+
 ![](Austin_Crime_files/figure-markdown_strict/Lasso-1.png)
 
 ![](Austin_Crime_files/figure-markdown_strict/Lasso2-1.png)
